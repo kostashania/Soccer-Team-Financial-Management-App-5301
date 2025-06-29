@@ -8,7 +8,7 @@ import { useData } from '../contexts/DataContext';
 import { getDatabaseInfo, testConnection } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
-const { FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink, FiDatabase, FiWifi, FiWifiOff, FiRefreshCw, FiInfo } = FiIcons;
+const { FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink, FiDatabase, FiWifi, FiWifiOff, FiRefreshCw, FiInfo, FiEdit3, FiSave, FiX } = FiIcons;
 
 const AdminPanel = () => {
   const { user } = useAuth();
@@ -16,21 +16,27 @@ const AdminPanel = () => {
     categories, 
     items, 
     platformButtons, 
-    transactions,
-    users,
-    connectionStatus,
+    transactions, 
+    users, 
+    connectionStatus, 
     addCategory, 
+    updateCategory, 
+    deleteCategory, 
     addItem, 
+    updateItem, 
+    deleteItem, 
     addPlatformButton, 
     deletePlatformButton, 
-    deleteTransaction,
-    fetchData,
-    checkConnection
+    deleteTransaction, 
+    fetchData, 
+    checkConnection 
   } = useData();
   
   const [activeTab, setActiveTab] = useState('database');
   const [dbInfo, setDbInfo] = useState(null);
   const [testing, setTesting] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
 
   const categoryForm = useForm();
   const itemForm = useForm();
@@ -53,8 +59,27 @@ const AdminPanel = () => {
     categoryForm.reset();
   };
 
+  const onUpdateCategory = (data) => {
+    updateCategory(editingCategory.id, data);
+    setEditingCategory(null);
+    categoryForm.reset();
+  };
+
   const onAddItem = (data) => {
-    addItem({ ...data, categoryId: parseInt(data.categoryId) });
+    console.log('Form data for new item:', data);
+    addItem({
+      ...data,
+      categoryId: parseInt(data.categoryId)
+    });
+    itemForm.reset();
+  };
+
+  const onUpdateItem = (data) => {
+    updateItem(editingItem.id, {
+      ...data,
+      categoryId: parseInt(data.categoryId)
+    });
+    setEditingItem(null);
     itemForm.reset();
   };
 
@@ -66,6 +91,18 @@ const AdminPanel = () => {
   const handleDeleteButton = (id) => {
     if (confirm('Are you sure you want to delete this button?')) {
       deletePlatformButton(id);
+    }
+  };
+
+  const handleDeleteCategory = (id) => {
+    if (confirm('Are you sure you want to delete this category?')) {
+      deleteCategory(id);
+    }
+  };
+
+  const handleDeleteItem = (id) => {
+    if (confirm('Are you sure you want to delete this item?')) {
+      deleteItem(id);
     }
   };
 
@@ -90,6 +127,22 @@ const AdminPanel = () => {
     toast.loading('Refreshing data...');
     await fetchData();
     toast.dismiss();
+  };
+
+  const startEditingCategory = (category) => {
+    setEditingCategory(category);
+    categoryForm.reset({
+      name: category.name,
+      type: category.type
+    });
+  };
+
+  const startEditingItem = (item) => {
+    setEditingItem(item);
+    itemForm.reset({
+      name: item.name,
+      categoryId: item.categoryId
+    });
   };
 
   const disapprovedTransactions = transactions.filter(t => t.approvalStatus === 'disapproved');
@@ -150,19 +203,16 @@ const AdminPanel = () => {
                 <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
                   connectionStatus === 'connected' 
                     ? 'bg-green-100 text-green-800' 
-                    : connectionStatus === 'disconnected'
-                    ? 'bg-red-100 text-red-800'
+                    : connectionStatus === 'disconnected' 
+                    ? 'bg-red-100 text-red-800' 
                     : 'bg-yellow-100 text-yellow-800'
                 }`}>
-                  <SafeIcon 
-                    icon={connectionStatus === 'connected' ? FiWifi : FiWifiOff} 
-                    className="w-4 h-4" 
-                  />
+                  <SafeIcon icon={connectionStatus === 'connected' ? FiWifi : FiWifiOff} className="w-4 h-4" />
                   <span className="capitalize">{connectionStatus}</span>
                 </div>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Database URL</label>
@@ -292,8 +342,10 @@ const AdminPanel = () => {
           transition={{ duration: 0.5 }}
         >
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Add New Category</h2>
-            <form onSubmit={categoryForm.handleSubmit(onAddCategory)} className="space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {editingCategory ? 'Edit Category' : 'Add New Category'}
+            </h2>
+            <form onSubmit={categoryForm.handleSubmit(editingCategory ? onUpdateCategory : onAddCategory)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -326,13 +378,28 @@ const AdminPanel = () => {
                   )}
                 </div>
               </div>
-              <button
-                type="submit"
-                className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-              >
-                <SafeIcon icon={FiPlus} className="w-4 h-4 mr-2" />
-                Add Category
-              </button>
+              <div className="flex space-x-3">
+                <button
+                  type="submit"
+                  className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                >
+                  <SafeIcon icon={editingCategory ? FiSave : FiPlus} className="w-4 h-4 mr-2" />
+                  {editingCategory ? 'Update Category' : 'Add Category'}
+                </button>
+                {editingCategory && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingCategory(null);
+                      categoryForm.reset();
+                    }}
+                    className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    <SafeIcon icon={FiX} className="w-4 h-4 mr-2" />
+                    Cancel
+                  </button>
+                )}
+              </div>
             </form>
           </div>
 
@@ -351,6 +418,20 @@ const AdminPanel = () => {
                       {category.type}
                     </span>
                   </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => startEditingCategory(category)}
+                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
+                    >
+                      <SafeIcon icon={FiEdit3} className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCategory(category.id)}
+                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+                    >
+                      <SafeIcon icon={FiTrash2} className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -367,8 +448,10 @@ const AdminPanel = () => {
           transition={{ duration: 0.5 }}
         >
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Add New Item</h2>
-            <form onSubmit={itemForm.handleSubmit(onAddItem)} className="space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {editingItem ? 'Edit Item' : 'Add New Item'}
+            </h2>
+            <form onSubmit={itemForm.handleSubmit(editingItem ? onUpdateItem : onAddItem)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -404,13 +487,28 @@ const AdminPanel = () => {
                   )}
                 </div>
               </div>
-              <button
-                type="submit"
-                className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-              >
-                <SafeIcon icon={FiPlus} className="w-4 h-4 mr-2" />
-                Add Item
-              </button>
+              <div className="flex space-x-3">
+                <button
+                  type="submit"
+                  className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                >
+                  <SafeIcon icon={editingItem ? FiSave : FiPlus} className="w-4 h-4 mr-2" />
+                  {editingItem ? 'Update Item' : 'Add Item'}
+                </button>
+                {editingItem && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingItem(null);
+                      itemForm.reset();
+                    }}
+                    className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    <SafeIcon icon={FiX} className="w-4 h-4 mr-2" />
+                    Cancel
+                  </button>
+                )}
+              </div>
             </form>
           </div>
 
@@ -426,6 +524,20 @@ const AdminPanel = () => {
                       <span className="ml-2 text-sm text-gray-600">
                         ({category?.name || 'Unknown Category'})
                       </span>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => startEditingItem(item)}
+                        className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
+                      >
+                        <SafeIcon icon={FiEdit3} className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteItem(item.id)}
+                        className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+                      >
+                        <SafeIcon icon={FiTrash2} className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 );
@@ -525,8 +637,8 @@ const AdminPanel = () => {
                   <span className="ml-2 text-sm text-gray-600">({userItem.email})</span>
                   <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
                     userItem.role === 'admin' 
-                      ? 'bg-red-100 text-red-800'
-                      : userItem.role === 'board'
+                      ? 'bg-red-100 text-red-800' 
+                      : userItem.role === 'board' 
                       ? 'bg-blue-100 text-blue-800' 
                       : 'bg-green-100 text-green-800'
                   }`}>

@@ -94,23 +94,27 @@ export const DataProvider = ({ children }) => {
         throw usersError;
       }
 
-      // Transform data to match frontend expectations - FIX THE MAPPING HERE
+      // Transform data with proper mapping
+      console.log('Raw categories data:', categoriesData);
+      console.log('Raw items data:', itemsData);
+
       setCategories(categoriesData?.map(cat => ({
-        ...cat,
-        id: cat.id
+        id: cat.id,
+        name: cat.name,
+        type: cat.type
       })) || []);
 
       setItems(itemsData?.map(item => ({
-        ...item,
         id: item.id,
-        categoryId: item.category_id // THIS IS THE KEY FIX
+        name: item.name,
+        categoryId: parseInt(item.category_id) // Ensure it's a number and properly mapped
       })) || []);
 
       setTransactions(transactionsData?.map(trans => ({
         ...trans,
         id: trans.id,
-        categoryId: trans.category_id,
-        itemId: trans.item_id,
+        categoryId: parseInt(trans.category_id),
+        itemId: parseInt(trans.item_id),
         submittedBy: trans.submitted_by,
         approvalStatus: trans.approval_status,
         approvedBy: trans.approved_by,
@@ -130,6 +134,9 @@ export const DataProvider = ({ children }) => {
         ...user,
         id: user.id
       })) || []);
+
+      console.log('Processed categories:', categoriesData?.map(cat => ({ id: cat.id, name: cat.name, type: cat.type })));
+      console.log('Processed items:', itemsData?.map(item => ({ id: item.id, name: item.name, categoryId: parseInt(item.category_id) })));
 
       toast.success('Data loaded successfully!');
       setConnectionStatus('connected');
@@ -152,8 +159,8 @@ export const DataProvider = ({ children }) => {
         .from('transactions_stf2024')
         .insert([{
           type: transaction.type,
-          category_id: transaction.categoryId,
-          item_id: transaction.itemId,
+          category_id: parseInt(transaction.categoryId),
+          item_id: parseInt(transaction.itemId),
           amount: transaction.amount,
           description: transaction.description,
           status: transaction.status,
@@ -173,8 +180,8 @@ export const DataProvider = ({ children }) => {
       const newTransaction = {
         ...data,
         id: data.id,
-        categoryId: data.category_id,
-        itemId: data.item_id,
+        categoryId: parseInt(data.category_id),
+        itemId: parseInt(data.item_id),
         submittedBy: data.submitted_by,
         approvalStatus: data.approval_status,
         approvedBy: data.approved_by,
@@ -219,8 +226,8 @@ export const DataProvider = ({ children }) => {
             ? {
                 ...t,
                 ...updates,
-                categoryId: data.category_id,
-                itemId: data.item_id,
+                categoryId: parseInt(data.category_id),
+                itemId: parseInt(data.item_id),
                 submittedBy: data.submitted_by,
                 approvalStatus: data.approval_status,
                 approvedBy: data.approved_by,
@@ -260,13 +267,20 @@ export const DataProvider = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('categories_stf2024')
-        .insert([category])
+        .insert([{
+          name: category.name,
+          type: category.type
+        }])
         .select()
         .single();
 
       if (error) throw error;
 
-      setCategories(prev => [...prev, { ...data, id: data.id }]);
+      setCategories(prev => [...prev, { 
+        id: data.id, 
+        name: data.name, 
+        type: data.type 
+      }]);
       toast.success('Category added successfully!');
     } catch (error) {
       console.error('Error adding category:', error);
@@ -274,12 +288,70 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  const updateCategory = async (id, updates) => {
+    try {
+      const { data, error } = await supabase
+        .from('categories_stf2024')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setCategories(prev => prev.map(cat => 
+        cat.id === id ? { 
+          id: data.id, 
+          name: data.name, 
+          type: data.type 
+        } : cat
+      ));
+      toast.success('Category updated successfully!');
+    } catch (error) {
+      console.error('Error updating category:', error);
+      toast.error(`Failed to update category: ${error.message}`);
+    }
+  };
+
+  const deleteCategory = async (id) => {
+    try {
+      // Check if category has items
+      const categoryItems = items.filter(item => item.categoryId === parseInt(id));
+      if (categoryItems.length > 0) {
+        toast.error('Cannot delete category with existing items. Delete items first.');
+        return;
+      }
+
+      // Check if category has transactions
+      const categoryTransactions = transactions.filter(trans => trans.categoryId === parseInt(id));
+      if (categoryTransactions.length > 0) {
+        toast.error('Cannot delete category with existing transactions.');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('categories_stf2024')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setCategories(prev => prev.filter(cat => cat.id !== parseInt(id)));
+      toast.success('Category deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      toast.error(`Failed to delete category: ${error.message}`);
+    }
+  };
+
   const addItem = async (item) => {
     try {
+      console.log('Adding item with categoryId:', item.categoryId);
+      
       const { data, error } = await supabase
         .from('items_stf2024')
         .insert([{
-          category_id: item.categoryId, // Use categoryId from frontend
+          category_id: parseInt(item.categoryId),
           name: item.name
         }])
         .select()
@@ -287,16 +359,74 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
+      console.log('Item added to DB:', data);
+
       // Add to local state with proper mapping
-      setItems(prev => [...prev, {
-        ...data,
+      const newItem = {
         id: data.id,
-        categoryId: data.category_id // Map back to frontend format
-      }]);
+        name: data.name,
+        categoryId: parseInt(data.category_id)
+      };
+
+      console.log('Adding to local state:', newItem);
+      setItems(prev => [...prev, newItem]);
       toast.success('Item added successfully!');
     } catch (error) {
       console.error('Error adding item:', error);
       toast.error(`Failed to add item: ${error.message}`);
+    }
+  };
+
+  const updateItem = async (id, updates) => {
+    try {
+      const dbUpdates = {};
+      if (updates.name) dbUpdates.name = updates.name;
+      if (updates.categoryId) dbUpdates.category_id = parseInt(updates.categoryId);
+
+      const { data, error } = await supabase
+        .from('items_stf2024')
+        .update(dbUpdates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setItems(prev => prev.map(item => 
+        item.id === parseInt(id) ? {
+          id: data.id,
+          name: data.name,
+          categoryId: parseInt(data.category_id)
+        } : item
+      ));
+      toast.success('Item updated successfully!');
+    } catch (error) {
+      console.error('Error updating item:', error);
+      toast.error(`Failed to update item: ${error.message}`);
+    }
+  };
+
+  const deleteItem = async (id) => {
+    try {
+      // Check if item has transactions
+      const itemTransactions = transactions.filter(trans => trans.itemId === parseInt(id));
+      if (itemTransactions.length > 0) {
+        toast.error('Cannot delete item with existing transactions.');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('items_stf2024')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setItems(prev => prev.filter(item => item.id !== parseInt(id)));
+      toast.success('Item deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      toast.error(`Failed to delete item: ${error.message}`);
     }
   };
 
@@ -347,7 +477,11 @@ export const DataProvider = ({ children }) => {
     updateTransaction,
     deleteTransaction,
     addCategory,
+    updateCategory,
+    deleteCategory,
     addItem,
+    updateItem,
+    deleteItem,
     addPlatformButton,
     deletePlatformButton,
     fetchData,

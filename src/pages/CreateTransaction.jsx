@@ -14,7 +14,7 @@ const CreateTransaction = () => {
   const { categories, items, addTransaction } = useData();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm({
     defaultValues: {
       submittedBy: user?.name,
@@ -33,7 +33,15 @@ const CreateTransaction = () => {
   const filteredCategories = categories.filter(cat => cat.type === watchedType);
   
   // Filter items based on selected category
-  const filteredItems = items.filter(item => item.categoryId === watchedCategory);
+  const filteredItems = items.filter(item => {
+    console.log('Filtering items. Item categoryId:', item.categoryId, 'Selected categoryId:', watchedCategory, 'Match:', item.categoryId === parseInt(watchedCategory));
+    return item.categoryId === parseInt(watchedCategory);
+  });
+
+  console.log('All categories:', categories);
+  console.log('All items:', items);
+  console.log('Filtered categories for type', watchedType, ':', filteredCategories);
+  console.log('Filtered items for category', watchedCategory, ':', filteredItems);
 
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
@@ -51,8 +59,8 @@ const CreateTransaction = () => {
     try {
       const transactionData = {
         type: data.type,
-        categoryId: data.categoryId,
-        itemId: data.itemId,
+        categoryId: parseInt(data.categoryId),
+        itemId: parseInt(data.itemId),
         amount: parseFloat(data.amount),
         description: data.description,
         status: data.status,
@@ -67,6 +75,7 @@ const CreateTransaction = () => {
         }))
       };
 
+      console.log('Submitting transaction:', transactionData);
       await addTransaction(transactionData);
       reset();
       setSelectedFiles([]);
@@ -154,6 +163,9 @@ const CreateTransaction = () => {
                 ))}
               </select>
               {errors.itemId && <p className="mt-1 text-sm text-red-600">{errors.itemId.message}</p>}
+              {watchedCategory && filteredItems.length === 0 && (
+                <p className="mt-1 text-sm text-yellow-600">No items found for this category</p>
+              )}
             </div>
 
             {/* Amount */}
@@ -165,7 +177,7 @@ const CreateTransaction = () => {
                 type="number"
                 step="0.01"
                 {...register('amount', { 
-                  required: 'Amount is required',
+                  required: 'Amount is required', 
                   min: { value: 0.01, message: 'Amount must be greater than 0' }
                 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -283,7 +295,7 @@ const CreateTransaction = () => {
                   <SafeIcon icon={FiUpload} className="w-8 h-8 text-gray-400" />
                   <span className="text-sm text-gray-600">Click to upload files</span>
                 </label>
-
+                
                 {selectedFiles.length > 0 && (
                   <div className="mt-4 space-y-2">
                     {selectedFiles.map((file, index) => (
