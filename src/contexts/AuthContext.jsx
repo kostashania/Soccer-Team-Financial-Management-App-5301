@@ -55,9 +55,16 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'User not found. Please check your email address.' };
       }
 
-      // For demo purposes, we're using a simple password check
-      // In production, you'd use Supabase Auth with proper password hashing
-      if (password === 'password') {
+      // Check if the provided password matches the user's stored password
+      const storedPassword = userData.password || 'password'; // Fallback to 'password' if no password set
+      
+      console.log('Password check:', { 
+        provided: password, 
+        stored: storedPassword, 
+        match: password === storedPassword 
+      });
+
+      if (password === storedPassword) {
         const userObj = {
           id: userData.id,
           name: userData.name,
@@ -72,6 +79,7 @@ export const AuthProvider = ({ children }) => {
       } else {
         return { success: false, error: 'Invalid password. Please try again.' };
       }
+
     } catch (error) {
       console.error('Login error:', error);
       return { success: false, error: 'Login failed. Please try again.' };

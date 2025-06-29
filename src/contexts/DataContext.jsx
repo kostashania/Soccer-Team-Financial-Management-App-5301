@@ -132,11 +132,12 @@ export const DataProvider = ({ children }) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        password: user.password || 'password' // Include password field
+        password: user.password || 'password' // Include password field with fallback
       })) || []);
 
       toast.success('Data loaded successfully!');
       setConnectionStatus('connected');
+
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error(`Failed to load data: ${error.message}`);
@@ -173,6 +174,7 @@ export const DataProvider = ({ children }) => {
         role: data.role,
         password: data.password
       }]);
+
       toast.success('User added successfully!');
     } catch (error) {
       console.error('Error adding user:', error);
@@ -182,6 +184,8 @@ export const DataProvider = ({ children }) => {
 
   const updateUser = async (id, updates) => {
     try {
+      console.log('Updating user with:', { id, updates });
+      
       const { data, error } = await supabase
         .from('users_stf2024')
         .update(updates)
@@ -190,6 +194,8 @@ export const DataProvider = ({ children }) => {
         .single();
 
       if (error) throw error;
+
+      console.log('User update response:', data);
 
       setUsers(prev => prev.map(user => 
         user.id === id ? {
@@ -200,6 +206,7 @@ export const DataProvider = ({ children }) => {
           password: data.password
         } : user
       ));
+
       toast.success('User updated successfully!');
     } catch (error) {
       console.error('Error updating user:', error);
@@ -289,22 +296,20 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      setTransactions(prev => prev.map(t => 
-        t.id === id ? {
-          ...t,
-          ...updates,
-          categoryId: data.category_id,
-          itemId: data.item_id,
-          submittedBy: data.submitted_by,
-          approvalStatus: data.approval_status,
-          approvedBy: data.approved_by,
-          approvedAt: data.approved_at,
-          disapprovedBy: data.disapproved_by,
-          disapprovedAt: data.disapproved_at,
-          expectedDate: data.expected_date,
-          createdAt: data.created_at
-        } : t
-      ));
+      setTransactions(prev => prev.map(t => t.id === id ? {
+        ...t,
+        ...updates,
+        categoryId: data.category_id,
+        itemId: data.item_id,
+        submittedBy: data.submitted_by,
+        approvalStatus: data.approval_status,
+        approvedBy: data.approved_by,
+        approvedAt: data.approved_at,
+        disapprovedBy: data.disapproved_by,
+        disapprovedAt: data.disapproved_at,
+        expectedDate: data.expected_date,
+        createdAt: data.created_at
+      } : t));
     } catch (error) {
       console.error('Error updating transaction:', error);
       toast.error(`Failed to update transaction: ${error.message}`);
@@ -346,6 +351,7 @@ export const DataProvider = ({ children }) => {
         name: data.name,
         type: data.type
       }]);
+
       toast.success('Category added successfully!');
     } catch (error) {
       console.error('Error adding category:', error);
@@ -364,13 +370,12 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      setCategories(prev => prev.map(cat => 
-        cat.id === id ? {
-          id: data.id,
-          name: data.name,
-          type: data.type
-        } : cat
-      ));
+      setCategories(prev => prev.map(cat => cat.id === id ? {
+        id: data.id,
+        name: data.name,
+        type: data.type
+      } : cat));
+
       toast.success('Category updated successfully!');
     } catch (error) {
       console.error('Error updating category:', error);
@@ -449,13 +454,12 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      setItems(prev => prev.map(item => 
-        item.id === id ? {
-          id: data.id,
-          name: data.name,
-          categoryId: data.category_id
-        } : item
-      ));
+      setItems(prev => prev.map(item => item.id === id ? {
+        id: data.id,
+        name: data.name,
+        categoryId: data.category_id
+      } : item));
+
       toast.success('Item updated successfully!');
     } catch (error) {
       console.error('Error updating item:', error);
