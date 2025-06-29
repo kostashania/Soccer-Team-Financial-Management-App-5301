@@ -5,36 +5,38 @@ import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../components/common/SafeIcon';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { getDatabaseInfo, testConnection } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
-const { FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink, FiDatabase, FiWifi, FiWifiOff, FiRefreshCw, FiInfo, FiEdit3, FiSave, FiX, FiUserPlus, FiMail, FiShield } = FiIcons;
+const { FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink, FiDatabase, FiWifi, FiWifiOff, FiRefreshCw, FiInfo, FiEdit3, FiSave, FiX, FiUserPlus, FiMail, FiShield, FiLock } = FiIcons;
 
 const AdminPanel = () => {
   const { user } = useAuth();
-  const { 
-    categories, 
-    items, 
-    platformButtons, 
-    transactions, 
-    users, 
-    connectionStatus, 
-    addCategory, 
-    updateCategory, 
-    deleteCategory, 
-    addItem, 
-    updateItem, 
-    deleteItem, 
-    addPlatformButton, 
-    deletePlatformButton, 
+  const { t } = useLanguage();
+  const {
+    categories,
+    items,
+    platformButtons,
+    transactions,
+    users,
+    connectionStatus,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    addItem,
+    updateItem,
+    deleteItem,
+    addPlatformButton,
+    deletePlatformButton,
     deleteTransaction,
     addUser,
     updateUser,
     deleteUser,
-    fetchData, 
-    checkConnection 
+    fetchData,
+    checkConnection
   } = useData();
-  
+
   const [activeTab, setActiveTab] = useState('database');
   const [dbInfo, setDbInfo] = useState(null);
   const [testing, setTesting] = useState(false);
@@ -71,19 +73,12 @@ const AdminPanel = () => {
   };
 
   const onAddItem = (data) => {
-    console.log('Form data for new item:', data);
-    addItem({
-      ...data,
-      categoryId: data.categoryId // Keep as UUID string
-    });
+    addItem({ ...data, categoryId: data.categoryId });
     itemForm.reset();
   };
 
   const onUpdateItem = (data) => {
-    updateItem(editingItem.id, {
-      ...data,
-      categoryId: data.categoryId // Keep as UUID string
-    });
+    updateItem(editingItem.id, { ...data, categoryId: data.categoryId });
     setEditingItem(null);
     itemForm.reset();
   };
@@ -153,18 +148,12 @@ const AdminPanel = () => {
 
   const startEditingCategory = (category) => {
     setEditingCategory(category);
-    categoryForm.reset({
-      name: category.name,
-      type: category.type
-    });
+    categoryForm.reset({ name: category.name, type: category.type });
   };
 
   const startEditingItem = (item) => {
     setEditingItem(item);
-    itemForm.reset({
-      name: item.name,
-      categoryId: item.categoryId // Keep as UUID string
-    });
+    itemForm.reset({ name: item.name, categoryId: item.categoryId });
   };
 
   const startEditingUser = (userItem) => {
@@ -172,7 +161,8 @@ const AdminPanel = () => {
     userForm.reset({
       name: userItem.name,
       email: userItem.email,
-      role: userItem.role
+      role: userItem.role,
+      password: userItem.password || 'password'
     });
   };
 
@@ -180,7 +170,7 @@ const AdminPanel = () => {
 
   const tabs = [
     { id: 'database', label: 'Database', icon: FiDatabase },
-    { id: 'users', label: 'User Management', icon: FiUsers },
+    { id: 'users', label: t('userManagement'), icon: FiUsers },
     { id: 'categories', label: 'Categories', icon: FiTag },
     { id: 'items', label: 'Items', icon: FiList },
     { id: 'buttons', label: 'Platform Buttons', icon: FiExternalLink },
@@ -194,7 +184,7 @@ const AdminPanel = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t('adminPanel')}</h1>
         <p className="mt-2 text-gray-600">Manage system configuration and data</p>
       </motion.div>
 
@@ -232,11 +222,8 @@ const AdminPanel = () => {
               <h2 className="text-lg font-semibold text-gray-900">Database Connection Status</h2>
               <div className="flex items-center space-x-2">
                 <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
-                  connectionStatus === 'connected' 
-                    ? 'bg-green-100 text-green-800' 
-                    : connectionStatus === 'disconnected' 
-                    ? 'bg-red-100 text-red-800' 
-                    : 'bg-yellow-100 text-yellow-800'
+                  connectionStatus === 'connected' ? 'bg-green-100 text-green-800' :
+                  connectionStatus === 'disconnected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
                 }`}>
                   <SafeIcon icon={connectionStatus === 'connected' ? FiWifi : FiWifiOff} className="w-4 h-4" />
                   <span className="capitalize">{connectionStatus}</span>
@@ -257,18 +244,6 @@ const AdminPanel = () => {
                   {dbInfo?.project_id}
                 </p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Schema</label>
-                <p className="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded">
-                  {dbInfo?.schema}
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Tables Count</label>
-                <p className="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded">
-                  {dbInfo?.tables?.length || 0} tables
-                </p>
-              </div>
             </div>
 
             <div className="flex space-x-3">
@@ -287,30 +262,6 @@ const AdminPanel = () => {
                 <SafeIcon icon={FiRefreshCw} className="w-4 h-4 mr-2" />
                 Refresh Data
               </button>
-            </div>
-          </div>
-
-          {/* Tables Information */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Database Tables</h2>
-            <div className="space-y-3">
-              {dbInfo?.tables?.map((table) => (
-                <div key={table} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <SafeIcon icon={FiList} className="w-4 h-4 text-gray-600" />
-                    <span className="font-mono text-sm text-gray-900">{table}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      connectionStatus === 'connected' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {connectionStatus === 'connected' ? 'Active' : 'Unknown'}
-                    </span>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
 
@@ -340,27 +291,6 @@ const AdminPanel = () => {
               </div>
             </div>
           </div>
-
-          {/* Connection Issues Help */}
-          {connectionStatus === 'disconnected' && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-              <div className="flex items-start">
-                <SafeIcon icon={FiInfo} className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
-                <div>
-                  <h3 className="text-sm font-medium text-red-900">Connection Issues Detected</h3>
-                  <div className="text-sm text-red-700 mt-2">
-                    <p>If you're experiencing connection issues, please check:</p>
-                    <ul className="list-disc list-inside mt-2 space-y-1">
-                      <li>Your internet connection</li>
-                      <li>Supabase project status</li>
-                      <li>Database credentials are correct</li>
-                      <li>Tables exist in the database</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </motion.div>
       )}
 
@@ -375,35 +305,39 @@ const AdminPanel = () => {
           {/* Add/Edit User Form */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {editingUser ? 'Edit User' : 'Add New User'}
+              {editingUser ? t('editUser') : t('addNewUser')}
             </h2>
-            <form onSubmit={userForm.handleSubmit(editingUser ? onUpdateUser : onAddUser)} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <form
+              onSubmit={userForm.handleSubmit(editingUser ? onUpdateUser : onAddUser)}
+              className="space-y-4"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name *
+                    {t('fullName')} *
                   </label>
                   <input
                     type="text"
-                    {...userForm.register('name', { required: 'Name is required' })}
+                    {...userForm.register('name', { required: t('nameRequired') })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Enter full name"
+                    placeholder={t('fullName')}
                   />
                   {userForm.formState.errors.name && (
                     <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.name.message}</p>
                   )}
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address *
+                    {t('emailAddress')} *
                   </label>
                   <input
                     type="email"
-                    {...userForm.register('email', { 
-                      required: 'Email is required',
+                    {...userForm.register('email', {
+                      required: t('emailRequired'),
                       pattern: {
                         value: /^\S+@\S+$/i,
-                        message: 'Invalid email address'
+                        message: t('invalidEmail')
                       }
                     })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -413,31 +347,49 @@ const AdminPanel = () => {
                     <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.email.message}</p>
                   )}
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Role *
+                    {t('role')} *
                   </label>
                   <select
-                    {...userForm.register('role', { required: 'Role is required' })}
+                    {...userForm.register('role', { required: t('roleRequired') })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   >
                     <option value="">Select role</option>
-                    <option value="admin">Admin</option>
-                    <option value="board">Board Member</option>
-                    <option value="cashier">Cashier</option>
+                    <option value="admin">{t('admin')}</option>
+                    <option value="board">{t('boardMember')}</option>
+                    <option value="cashier">{t('cashier')}</option>
                   </select>
                   {userForm.formState.errors.role && (
                     <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.role.message}</p>
                   )}
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('password')} *
+                  </label>
+                  <input
+                    type="text"
+                    {...userForm.register('password', { required: t('passwordRequired') })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Enter password"
+                    defaultValue="password"
+                  />
+                  {userForm.formState.errors.password && (
+                    <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.password.message}</p>
+                  )}
+                </div>
               </div>
+
               <div className="flex space-x-3">
                 <button
                   type="submit"
                   className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
                 >
                   <SafeIcon icon={editingUser ? FiSave : FiUserPlus} className="w-4 h-4 mr-2" />
-                  {editingUser ? 'Update User' : 'Add User'}
+                  {editingUser ? t('updateUser') : t('addUser')}
                 </button>
                 {editingUser && (
                   <button
@@ -449,98 +401,65 @@ const AdminPanel = () => {
                     className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
                   >
                     <SafeIcon icon={FiX} className="w-4 h-4 mr-2" />
-                    Cancel
+                    {t('cancel')}
                   </button>
                 )}
               </div>
             </form>
           </div>
 
-          {/* Current User Credentials Info */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <div className="flex items-start">
-              <SafeIcon icon={FiInfo} className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="text-sm font-medium text-blue-900 mb-2">Current System Users & Credentials</h3>
-                <div className="text-sm text-blue-800 space-y-2">
-                  <div className="bg-blue-100 p-3 rounded-md">
-                    <p className="font-medium">🔑 Default Password for all users: <code className="bg-blue-200 px-2 py-1 rounded">password</code></p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <div className="bg-white p-3 rounded-md border border-blue-200">
-                      <p className="font-medium text-red-700">👨‍💼 Admin</p>
-                      <p className="text-sm">Email: <code>admin@team.com</code></p>
-                      <p className="text-sm">Full Access</p>
-                    </div>
-                    <div className="bg-white p-3 rounded-md border border-blue-200">
-                      <p className="font-medium text-blue-700">👥 Board Member</p>
-                      <p className="text-sm">Email: <code>board@team.com</code></p>
-                      <p className="text-sm">Financial Reports</p>
-                    </div>
-                    <div className="bg-white p-3 rounded-md border border-blue-200">
-                      <p className="font-medium text-green-700">💰 Cashier</p>
-                      <p className="text-sm">Email: <code>cashier@team.com</code></p>
-                      <p className="text-sm">Approve Transactions</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Users List */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              System Users ({users?.length || 0})
+              {t('systemUsers')} ({users?.length || 0})
             </h2>
             <div className="space-y-3">
               {users && users.length > 0 ? users.map((userItem) => (
-                <div key={userItem.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                <div
+                  key={userItem.id}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
                   <div className="flex items-center space-x-4">
                     <div className={`p-2 rounded-full ${
-                      userItem.role === 'admin' 
-                        ? 'bg-red-100' 
-                        : userItem.role === 'board' 
-                        ? 'bg-blue-100' 
-                        : 'bg-green-100'
+                      userItem.role === 'admin' ? 'bg-red-100' :
+                      userItem.role === 'board' ? 'bg-blue-100' : 'bg-green-100'
                     }`}>
-                      <SafeIcon 
-                        icon={userItem.role === 'admin' ? FiShield : userItem.role === 'board' ? FiUsers : FiMail} 
+                      <SafeIcon
+                        icon={userItem.role === 'admin' ? FiShield : userItem.role === 'board' ? FiUsers : FiMail}
                         className={`w-5 h-5 ${
-                          userItem.role === 'admin' 
-                            ? 'text-red-600' 
-                            : userItem.role === 'board' 
-                            ? 'text-blue-600' 
-                            : 'text-green-600'
-                        }`} 
+                          userItem.role === 'admin' ? 'text-red-600' :
+                          userItem.role === 'board' ? 'text-blue-600' : 'text-green-600'
+                        }`}
                       />
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">{userItem.name}</p>
                       <p className="text-sm text-gray-600">{userItem.email}</p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <SafeIcon icon={FiLock} className="w-3 h-3 text-gray-400" />
+                        <p className="text-xs text-gray-500 font-mono">{userItem.password || 'password'}</p>
+                      </div>
                     </div>
                     <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                      userItem.role === 'admin' 
-                        ? 'bg-red-100 text-red-800' 
-                        : userItem.role === 'board' 
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-green-100 text-green-800'
+                      userItem.role === 'admin' ? 'bg-red-100 text-red-800' :
+                      userItem.role === 'board' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
                     }`}>
-                      {userItem.role.charAt(0).toUpperCase() + userItem.role.slice(1)}
+                      {userItem.role === 'admin' ? t('admin') :
+                       userItem.role === 'board' ? t('boardMember') : t('cashier')}
                     </span>
                   </div>
                   <div className="flex space-x-2">
                     <button
                       onClick={() => startEditingUser(userItem)}
                       className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
-                      title="Edit User"
+                      title={t('edit')}
                     >
                       <SafeIcon icon={FiEdit3} className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteUser(userItem.id)}
                       className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
-                      title="Delete User"
+                      title={t('delete')}
                     >
                       <SafeIcon icon={FiTrash2} className="w-4 h-4" />
                     </button>
@@ -558,16 +477,16 @@ const AdminPanel = () => {
 
           {/* User Permissions Info */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">User Role Permissions</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('userRolePermissions')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="border border-red-200 rounded-lg p-4">
                 <div className="flex items-center mb-3">
                   <SafeIcon icon={FiShield} className="w-5 h-5 text-red-600 mr-2" />
-                  <h4 className="font-semibold text-red-800">Admin</h4>
+                  <h4 className="font-semibold text-red-800">{t('admin')}</h4>
                 </div>
                 <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• Full system access</li>
-                  <li>• User management</li>
+                  <li>• {t('fullAccess')}</li>
+                  <li>• {t('userManagement')}</li>
                   <li>• Categories & items management</li>
                   <li>• Transaction approval</li>
                   <li>• All reports and analytics</li>
@@ -577,7 +496,7 @@ const AdminPanel = () => {
               <div className="border border-blue-200 rounded-lg p-4">
                 <div className="flex items-center mb-3">
                   <SafeIcon icon={FiUsers} className="w-5 h-5 text-blue-600 mr-2" />
-                  <h4 className="font-semibold text-blue-800">Board Member</h4>
+                  <h4 className="font-semibold text-blue-800">{t('boardMember')}</h4>
                 </div>
                 <ul className="text-sm text-gray-600 space-y-1">
                   <li>• View dashboard</li>
@@ -591,11 +510,11 @@ const AdminPanel = () => {
               <div className="border border-green-200 rounded-lg p-4">
                 <div className="flex items-center mb-3">
                   <SafeIcon icon={FiMail} className="w-5 h-5 text-green-600 mr-2" />
-                  <h4 className="font-semibold text-green-800">Cashier</h4>
+                  <h4 className="font-semibold text-green-800">{t('cashier')}</h4>
                 </div>
                 <ul className="text-sm text-gray-600 space-y-1">
                   <li>• View dashboard</li>
-                  <li>• Approve/disapprove transactions</li>
+                  <li>• {t('approveTransactions')}</li>
                   <li>• View pending transactions</li>
                   <li>• Generate basic reports</li>
                   <li>• Monthly reports</li>
@@ -607,7 +526,7 @@ const AdminPanel = () => {
         </motion.div>
       )}
 
-      {/* Categories Tab */}
+      {/* Other tabs remain the same but will be enhanced with translations in future updates */}
       {activeTab === 'categories' && (
         <motion.div
           className="space-y-6"
@@ -619,7 +538,10 @@ const AdminPanel = () => {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editingCategory ? 'Edit Category' : 'Add New Category'}
             </h2>
-            <form onSubmit={categoryForm.handleSubmit(editingCategory ? onUpdateCategory : onAddCategory)} className="space-y-4">
+            <form
+              onSubmit={categoryForm.handleSubmit(editingCategory ? onUpdateCategory : onAddCategory)}
+              className="space-y-4"
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -685,9 +607,7 @@ const AdminPanel = () => {
                   <div>
                     <span className="font-medium text-gray-900">{category.name}</span>
                     <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                      category.type === 'income' 
-                        ? 'bg-success-100 text-success-800' 
-                        : 'bg-danger-100 text-danger-800'
+                      category.type === 'income' ? 'bg-success-100 text-success-800' : 'bg-danger-100 text-danger-800'
                     }`}>
                       {category.type}
                     </span>
@@ -725,7 +645,10 @@ const AdminPanel = () => {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editingItem ? 'Edit Item' : 'Add New Item'}
             </h2>
-            <form onSubmit={itemForm.handleSubmit(editingItem ? onUpdateItem : onAddItem)} className="space-y-4">
+            <form
+              onSubmit={itemForm.handleSubmit(editingItem ? onUpdateItem : onAddItem)}
+              className="space-y-4"
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">

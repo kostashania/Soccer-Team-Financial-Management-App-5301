@@ -32,7 +32,7 @@ export const DataProvider = ({ children }) => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      
+
       // First test connection
       const connectionTest = await checkConnection();
       if (!connectionTest.success) {
@@ -94,10 +94,7 @@ export const DataProvider = ({ children }) => {
         throw usersError;
       }
 
-      // Transform data with proper mapping - categories and items use UUIDs
-      console.log('Raw categories data:', categoriesData);
-      console.log('Raw items data:', itemsData);
-
+      // Transform data with proper mapping
       setCategories(categoriesData?.map(cat => ({
         id: cat.id,
         name: cat.name,
@@ -107,14 +104,14 @@ export const DataProvider = ({ children }) => {
       setItems(itemsData?.map(item => ({
         id: item.id,
         name: item.name,
-        categoryId: item.category_id // Keep as UUID string, don't parse as int
+        categoryId: item.category_id
       })) || []);
 
       setTransactions(transactionsData?.map(trans => ({
         ...trans,
         id: trans.id,
-        categoryId: trans.category_id, // Keep as UUID string
-        itemId: trans.item_id, // Keep as UUID string
+        categoryId: trans.category_id,
+        itemId: trans.item_id,
         submittedBy: trans.submitted_by,
         approvalStatus: trans.approval_status,
         approvedBy: trans.approved_by,
@@ -131,12 +128,12 @@ export const DataProvider = ({ children }) => {
       })) || []);
 
       setUsers(usersData?.map(user => ({
-        ...user,
-        id: user.id
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        password: user.password || 'password' // Include password field
       })) || []);
-
-      console.log('Processed categories:', categoriesData?.map(cat => ({ id: cat.id, name: cat.name, type: cat.type })));
-      console.log('Processed items:', itemsData?.map(item => ({ id: item.id, name: item.name, categoryId: item.category_id })));
 
       toast.success('Data loaded successfully!');
       setConnectionStatus('connected');
@@ -153,14 +150,89 @@ export const DataProvider = ({ children }) => {
     fetchData();
   }, []);
 
+  // User Management Functions
+  const addUser = async (user) => {
+    try {
+      const { data, error } = await supabase
+        .from('users_stf2024')
+        .insert([{
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          password: user.password || 'password'
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setUsers(prev => [...prev, {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        password: data.password
+      }]);
+      toast.success('User added successfully!');
+    } catch (error) {
+      console.error('Error adding user:', error);
+      toast.error(`Failed to add user: ${error.message}`);
+    }
+  };
+
+  const updateUser = async (id, updates) => {
+    try {
+      const { data, error } = await supabase
+        .from('users_stf2024')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setUsers(prev => prev.map(user => 
+        user.id === id ? {
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          role: data.role,
+          password: data.password
+        } : user
+      ));
+      toast.success('User updated successfully!');
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast.error(`Failed to update user: ${error.message}`);
+    }
+  };
+
+  const deleteUser = async (id) => {
+    try {
+      const { error } = await supabase
+        .from('users_stf2024')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setUsers(prev => prev.filter(user => user.id !== id));
+      toast.success('User deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error(`Failed to delete user: ${error.message}`);
+    }
+  };
+
+  // Rest of the functions remain the same...
   const addTransaction = async (transaction) => {
     try {
       const { data, error } = await supabase
         .from('transactions_stf2024')
         .insert([{
           type: transaction.type,
-          category_id: transaction.categoryId, // Keep as UUID string
-          item_id: transaction.itemId, // Keep as UUID string
+          category_id: transaction.categoryId,
+          item_id: transaction.itemId,
           amount: transaction.amount,
           description: transaction.description,
           status: transaction.status,
@@ -176,12 +248,11 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      // Transform and add to local state
       const newTransaction = {
         ...data,
         id: data.id,
-        categoryId: data.category_id, // Keep as UUID string
-        itemId: data.item_id, // Keep as UUID string
+        categoryId: data.category_id,
+        itemId: data.item_id,
         submittedBy: data.submitted_by,
         approvalStatus: data.approval_status,
         approvedBy: data.approved_by,
@@ -203,7 +274,6 @@ export const DataProvider = ({ children }) => {
   const updateTransaction = async (id, updates) => {
     try {
       const dbUpdates = {};
-      // Map frontend field names to database field names
       if (updates.approvalStatus) dbUpdates.approval_status = updates.approvalStatus;
       if (updates.approvedBy) dbUpdates.approved_by = updates.approvedBy;
       if (updates.approvedAt) dbUpdates.approved_at = updates.approvedAt;
@@ -219,27 +289,22 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      // Update local state
-      setTransactions(prev => 
-        prev.map(t => 
-          t.id === id 
-            ? {
-                ...t,
-                ...updates,
-                categoryId: data.category_id, // Keep as UUID string
-                itemId: data.item_id, // Keep as UUID string
-                submittedBy: data.submitted_by,
-                approvalStatus: data.approval_status,
-                approvedBy: data.approved_by,
-                approvedAt: data.approved_at,
-                disapprovedBy: data.disapproved_by,
-                disapprovedAt: data.disapproved_at,
-                expectedDate: data.expected_date,
-                createdAt: data.created_at
-              }
-            : t
-        )
-      );
+      setTransactions(prev => prev.map(t => 
+        t.id === id ? {
+          ...t,
+          ...updates,
+          categoryId: data.category_id,
+          itemId: data.item_id,
+          submittedBy: data.submitted_by,
+          approvalStatus: data.approval_status,
+          approvedBy: data.approved_by,
+          approvedAt: data.approved_at,
+          disapprovedBy: data.disapproved_by,
+          disapprovedAt: data.disapproved_at,
+          expectedDate: data.expected_date,
+          createdAt: data.created_at
+        } : t
+      ));
     } catch (error) {
       console.error('Error updating transaction:', error);
       toast.error(`Failed to update transaction: ${error.message}`);
@@ -276,10 +341,10 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      setCategories(prev => [...prev, { 
-        id: data.id, 
-        name: data.name, 
-        type: data.type 
+      setCategories(prev => [...prev, {
+        id: data.id,
+        name: data.name,
+        type: data.type
       }]);
       toast.success('Category added successfully!');
     } catch (error) {
@@ -300,10 +365,10 @@ export const DataProvider = ({ children }) => {
       if (error) throw error;
 
       setCategories(prev => prev.map(cat => 
-        cat.id === id ? { 
-          id: data.id, 
-          name: data.name, 
-          type: data.type 
+        cat.id === id ? {
+          id: data.id,
+          name: data.name,
+          type: data.type
         } : cat
       ));
       toast.success('Category updated successfully!');
@@ -315,15 +380,13 @@ export const DataProvider = ({ children }) => {
 
   const deleteCategory = async (id) => {
     try {
-      // Check if category has items
-      const categoryItems = items.filter(item => item.categoryId === id); // Compare UUID strings directly
+      const categoryItems = items.filter(item => item.categoryId === id);
       if (categoryItems.length > 0) {
         toast.error('Cannot delete category with existing items. Delete items first.');
         return;
       }
 
-      // Check if category has transactions
-      const categoryTransactions = transactions.filter(trans => trans.categoryId === id); // Compare UUID strings directly
+      const categoryTransactions = transactions.filter(trans => trans.categoryId === id);
       if (categoryTransactions.length > 0) {
         toast.error('Cannot delete category with existing transactions.');
         return;
@@ -346,12 +409,10 @@ export const DataProvider = ({ children }) => {
 
   const addItem = async (item) => {
     try {
-      console.log('Adding item with categoryId:', item.categoryId);
-      
       const { data, error } = await supabase
         .from('items_stf2024')
         .insert([{
-          category_id: item.categoryId, // Keep as UUID string, don't parse
+          category_id: item.categoryId,
           name: item.name
         }])
         .select()
@@ -359,16 +420,12 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      console.log('Item added to DB:', data);
-
-      // Add to local state with proper mapping
       const newItem = {
         id: data.id,
         name: data.name,
-        categoryId: data.category_id // Keep as UUID string
+        categoryId: data.category_id
       };
 
-      console.log('Adding to local state:', newItem);
       setItems(prev => [...prev, newItem]);
       toast.success('Item added successfully!');
     } catch (error) {
@@ -381,7 +438,7 @@ export const DataProvider = ({ children }) => {
     try {
       const dbUpdates = {};
       if (updates.name) dbUpdates.name = updates.name;
-      if (updates.categoryId) dbUpdates.category_id = updates.categoryId; // Keep as UUID string
+      if (updates.categoryId) dbUpdates.category_id = updates.categoryId;
 
       const { data, error } = await supabase
         .from('items_stf2024')
@@ -396,7 +453,7 @@ export const DataProvider = ({ children }) => {
         item.id === id ? {
           id: data.id,
           name: data.name,
-          categoryId: data.category_id // Keep as UUID string
+          categoryId: data.category_id
         } : item
       ));
       toast.success('Item updated successfully!');
@@ -408,8 +465,7 @@ export const DataProvider = ({ children }) => {
 
   const deleteItem = async (id) => {
     try {
-      // Check if item has transactions
-      const itemTransactions = transactions.filter(trans => trans.itemId === id); // Compare UUID strings directly
+      const itemTransactions = transactions.filter(trans => trans.itemId === id);
       if (itemTransactions.length > 0) {
         toast.error('Cannot delete item with existing transactions.');
         return;
@@ -462,77 +518,6 @@ export const DataProvider = ({ children }) => {
     } catch (error) {
       console.error('Error deleting platform button:', error);
       toast.error(`Failed to delete platform button: ${error.message}`);
-    }
-  };
-
-  // User Management Functions
-  const addUser = async (user) => {
-    try {
-      const { data, error } = await supabase
-        .from('users_stf2024')
-        .insert([{
-          name: user.name,
-          email: user.email,
-          role: user.role
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setUsers(prev => [...prev, {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        role: data.role
-      }]);
-      toast.success('User added successfully!');
-    } catch (error) {
-      console.error('Error adding user:', error);
-      toast.error(`Failed to add user: ${error.message}`);
-    }
-  };
-
-  const updateUser = async (id, updates) => {
-    try {
-      const { data, error } = await supabase
-        .from('users_stf2024')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setUsers(prev => prev.map(user => 
-        user.id === id ? {
-          id: data.id,
-          name: data.name,
-          email: data.email,
-          role: data.role
-        } : user
-      ));
-      toast.success('User updated successfully!');
-    } catch (error) {
-      console.error('Error updating user:', error);
-      toast.error(`Failed to update user: ${error.message}`);
-    }
-  };
-
-  const deleteUser = async (id) => {
-    try {
-      const { error } = await supabase
-        .from('users_stf2024')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      setUsers(prev => prev.filter(user => user.id !== id));
-      toast.success('User deleted successfully!');
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      toast.error(`Failed to delete user: ${error.message}`);
     }
   };
 

@@ -4,9 +4,10 @@ import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../components/common/SafeIcon';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import toast from 'react-hot-toast';
 
-const { FiMail, FiLock, FiEye, FiEyeOff, FiDollarSign } = FiIcons;
+const { FiMail, FiLock, FiEye, FiEyeOff, FiDollarSign, FiGlobe } = FiIcons;
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -14,6 +15,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user, login } = useAuth();
+  const { language, changeLanguage, t } = useLanguage();
 
   if (user) {
     return <Navigate to="/dashboard" replace />;
@@ -39,14 +41,18 @@ const Login = () => {
   };
 
   const demoUsers = [
-    { email: 'admin@team.com', role: 'Admin', password: 'password' },
-    { email: 'board@team.com', role: 'Board Member', password: 'password' },
-    { email: 'cashier@team.com', role: 'Cashier', password: 'password' }
+    { email: 'admin@team.com', role: t('admin'), password: 'password' },
+    { email: 'board@team.com', role: t('boardMember'), password: 'password' },
+    { email: 'cashier@team.com', role: t('cashier'), password: 'password' }
   ];
 
   const handleDemoLogin = (demoUser) => {
     setEmail(demoUser.email);
     setPassword(demoUser.password);
+  };
+
+  const toggleLanguage = () => {
+    changeLanguage(language === 'en' ? 'el' : 'en');
   };
 
   return (
@@ -70,8 +76,22 @@ const Login = () => {
             Soccer Team Finance
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Sign in to your account
+            {t('signIn')}
           </p>
+
+          {/* Language Toggle */}
+          <div className="mt-4 flex justify-center">
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center space-x-2 px-3 py-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-white hover:bg-opacity-50 transition-colors"
+              title={`${t('language')}: ${language === 'en' ? t('english') : t('greek')}`}
+            >
+              <SafeIcon icon={FiGlobe} className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                {language === 'en' ? t('english') : t('greek')}
+              </span>
+            </button>
+          </div>
         </div>
 
         <motion.form
@@ -84,7 +104,7 @@ const Login = () => {
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
+                {t('email')}
               </label>
               <div className="mt-1 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -98,14 +118,14 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Enter your email"
+                  placeholder={t('email')}
                 />
               </div>
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
+                {t('password')}
               </label>
               <div className="mt-1 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -119,7 +139,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Enter your password"
+                  placeholder={t('password')}
                 />
                 <button
                   type="button"
@@ -143,7 +163,7 @@ const Login = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              {loading ? 'Signing in...' : 'Sign in'}
+              {loading ? t('signingIn') : t('login')}
             </motion.button>
           </div>
         </motion.form>
@@ -159,7 +179,7 @@ const Login = () => {
               <div className="w-full border-t border-gray-300" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-primary-50 text-gray-500">Demo Users</span>
+              <span className="px-2 bg-primary-50 text-gray-500">{t('demoUsers')}</span>
             </div>
           </div>
 
@@ -173,7 +193,7 @@ const Login = () => {
               >
                 <div className="font-medium text-gray-900">{user.role}</div>
                 <div className="text-gray-600">{user.email}</div>
-                <div className="text-xs text-gray-500">Password: {user.password}</div>
+                <div className="text-xs text-gray-500">{t('password')}: {user.password}</div>
               </button>
             ))}
           </div>
@@ -182,9 +202,9 @@ const Login = () => {
             <div className="flex items-start">
               <SafeIcon icon={FiLock} className="w-4 h-4 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
               <div className="text-xs text-blue-800">
-                <p className="font-medium">Demo Login Information:</p>
-                <p>All users use the password: <code className="bg-blue-100 px-1 rounded">password</code></p>
-                <p>Click any demo user above to auto-fill the form.</p>
+                <p className="font-medium">{t('demoLoginInfo')}</p>
+                <p>{t('allUsersPassword')} <code className="bg-blue-100 px-1 rounded">password</code></p>
+                <p>{t('clickToAutoFill')}</p>
               </div>
             </div>
           </div>
