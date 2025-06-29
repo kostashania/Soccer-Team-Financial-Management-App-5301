@@ -8,7 +8,7 @@ import { useData } from '../contexts/DataContext';
 import { getDatabaseInfo, testConnection } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
-const { FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink, FiDatabase, FiWifi, FiWifiOff, FiRefreshCw, FiInfo, FiEdit3, FiSave, FiX } = FiIcons;
+const { FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink, FiDatabase, FiWifi, FiWifiOff, FiRefreshCw, FiInfo, FiEdit3, FiSave, FiX, FiUserPlus, FiMail, FiShield } = FiIcons;
 
 const AdminPanel = () => {
   const { user } = useAuth();
@@ -27,7 +27,10 @@ const AdminPanel = () => {
     deleteItem, 
     addPlatformButton, 
     deletePlatformButton, 
-    deleteTransaction, 
+    deleteTransaction,
+    addUser,
+    updateUser,
+    deleteUser,
     fetchData, 
     checkConnection 
   } = useData();
@@ -37,10 +40,12 @@ const AdminPanel = () => {
   const [testing, setTesting] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
+  const [editingUser, setEditingUser] = useState(null);
 
   const categoryForm = useForm();
   const itemForm = useForm();
   const buttonForm = useForm();
+  const userForm = useForm();
 
   useEffect(() => {
     setDbInfo(getDatabaseInfo());
@@ -69,7 +74,7 @@ const AdminPanel = () => {
     console.log('Form data for new item:', data);
     addItem({
       ...data,
-      categoryId: parseInt(data.categoryId)
+      categoryId: data.categoryId // Keep as UUID string
     });
     itemForm.reset();
   };
@@ -77,7 +82,7 @@ const AdminPanel = () => {
   const onUpdateItem = (data) => {
     updateItem(editingItem.id, {
       ...data,
-      categoryId: parseInt(data.categoryId)
+      categoryId: data.categoryId // Keep as UUID string
     });
     setEditingItem(null);
     itemForm.reset();
@@ -86,6 +91,17 @@ const AdminPanel = () => {
   const onAddButton = (data) => {
     addPlatformButton(data);
     buttonForm.reset();
+  };
+
+  const onAddUser = (data) => {
+    addUser(data);
+    userForm.reset();
+  };
+
+  const onUpdateUser = (data) => {
+    updateUser(editingUser.id, data);
+    setEditingUser(null);
+    userForm.reset();
   };
 
   const handleDeleteButton = (id) => {
@@ -109,6 +125,12 @@ const AdminPanel = () => {
   const handleDeleteTransaction = (id) => {
     if (confirm('Are you sure you want to delete this transaction?')) {
       deleteTransaction(id);
+    }
+  };
+
+  const handleDeleteUser = (id) => {
+    if (confirm('Are you sure you want to delete this user?')) {
+      deleteUser(id);
     }
   };
 
@@ -141,7 +163,16 @@ const AdminPanel = () => {
     setEditingItem(item);
     itemForm.reset({
       name: item.name,
-      categoryId: item.categoryId
+      categoryId: item.categoryId // Keep as UUID string
+    });
+  };
+
+  const startEditingUser = (userItem) => {
+    setEditingUser(userItem);
+    userForm.reset({
+      name: userItem.name,
+      email: userItem.email,
+      role: userItem.role
     });
   };
 
@@ -149,10 +180,10 @@ const AdminPanel = () => {
 
   const tabs = [
     { id: 'database', label: 'Database', icon: FiDatabase },
+    { id: 'users', label: 'User Management', icon: FiUsers },
     { id: 'categories', label: 'Categories', icon: FiTag },
     { id: 'items', label: 'Items', icon: FiList },
     { id: 'buttons', label: 'Platform Buttons', icon: FiExternalLink },
-    { id: 'users', label: 'Users', icon: FiUsers },
     { id: 'disapproved', label: 'Disapproved', icon: FiTrash2 }
   ];
 
@@ -330,6 +361,249 @@ const AdminPanel = () => {
               </div>
             </div>
           )}
+        </motion.div>
+      )}
+
+      {/* User Management Tab */}
+      {activeTab === 'users' && (
+        <motion.div
+          className="space-y-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          {/* Add/Edit User Form */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {editingUser ? 'Edit User' : 'Add New User'}
+            </h2>
+            <form onSubmit={userForm.handleSubmit(editingUser ? onUpdateUser : onAddUser)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    {...userForm.register('name', { required: 'Name is required' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Enter full name"
+                  />
+                  {userForm.formState.errors.name && (
+                    <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.name.message}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    {...userForm.register('email', { 
+                      required: 'Email is required',
+                      pattern: {
+                        value: /^\S+@\S+$/i,
+                        message: 'Invalid email address'
+                      }
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="user@example.com"
+                  />
+                  {userForm.formState.errors.email && (
+                    <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.email.message}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Role *
+                  </label>
+                  <select
+                    {...userForm.register('role', { required: 'Role is required' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="">Select role</option>
+                    <option value="admin">Admin</option>
+                    <option value="board">Board Member</option>
+                    <option value="cashier">Cashier</option>
+                  </select>
+                  {userForm.formState.errors.role && (
+                    <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.role.message}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  type="submit"
+                  className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                >
+                  <SafeIcon icon={editingUser ? FiSave : FiUserPlus} className="w-4 h-4 mr-2" />
+                  {editingUser ? 'Update User' : 'Add User'}
+                </button>
+                {editingUser && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingUser(null);
+                      userForm.reset();
+                    }}
+                    className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    <SafeIcon icon={FiX} className="w-4 h-4 mr-2" />
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+
+          {/* Current User Credentials Info */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <div className="flex items-start">
+              <SafeIcon icon={FiInfo} className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-sm font-medium text-blue-900 mb-2">Current System Users & Credentials</h3>
+                <div className="text-sm text-blue-800 space-y-2">
+                  <div className="bg-blue-100 p-3 rounded-md">
+                    <p className="font-medium">🔑 Default Password for all users: <code className="bg-blue-200 px-2 py-1 rounded">password</code></p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div className="bg-white p-3 rounded-md border border-blue-200">
+                      <p className="font-medium text-red-700">👨‍💼 Admin</p>
+                      <p className="text-sm">Email: <code>admin@team.com</code></p>
+                      <p className="text-sm">Full Access</p>
+                    </div>
+                    <div className="bg-white p-3 rounded-md border border-blue-200">
+                      <p className="font-medium text-blue-700">👥 Board Member</p>
+                      <p className="text-sm">Email: <code>board@team.com</code></p>
+                      <p className="text-sm">Financial Reports</p>
+                    </div>
+                    <div className="bg-white p-3 rounded-md border border-blue-200">
+                      <p className="font-medium text-green-700">💰 Cashier</p>
+                      <p className="text-sm">Email: <code>cashier@team.com</code></p>
+                      <p className="text-sm">Approve Transactions</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Users List */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              System Users ({users?.length || 0})
+            </h2>
+            <div className="space-y-3">
+              {users && users.length > 0 ? users.map((userItem) => (
+                <div key={userItem.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div className="flex items-center space-x-4">
+                    <div className={`p-2 rounded-full ${
+                      userItem.role === 'admin' 
+                        ? 'bg-red-100' 
+                        : userItem.role === 'board' 
+                        ? 'bg-blue-100' 
+                        : 'bg-green-100'
+                    }`}>
+                      <SafeIcon 
+                        icon={userItem.role === 'admin' ? FiShield : userItem.role === 'board' ? FiUsers : FiMail} 
+                        className={`w-5 h-5 ${
+                          userItem.role === 'admin' 
+                            ? 'text-red-600' 
+                            : userItem.role === 'board' 
+                            ? 'text-blue-600' 
+                            : 'text-green-600'
+                        }`} 
+                      />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{userItem.name}</p>
+                      <p className="text-sm text-gray-600">{userItem.email}</p>
+                    </div>
+                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                      userItem.role === 'admin' 
+                        ? 'bg-red-100 text-red-800' 
+                        : userItem.role === 'board' 
+                        ? 'bg-blue-100 text-blue-800' 
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      {userItem.role.charAt(0).toUpperCase() + userItem.role.slice(1)}
+                    </span>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => startEditingUser(userItem)}
+                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
+                      title="Edit User"
+                    >
+                      <SafeIcon icon={FiEdit3} className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteUser(userItem.id)}
+                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+                      title="Delete User"
+                    >
+                      <SafeIcon icon={FiTrash2} className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )) : (
+                <div className="text-center py-8">
+                  <SafeIcon icon={FiUsers} className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No users found</p>
+                  <p className="text-sm text-gray-500 mt-2">Add your first user to get started</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* User Permissions Info */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">User Role Permissions</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="border border-red-200 rounded-lg p-4">
+                <div className="flex items-center mb-3">
+                  <SafeIcon icon={FiShield} className="w-5 h-5 text-red-600 mr-2" />
+                  <h4 className="font-semibold text-red-800">Admin</h4>
+                </div>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>• Full system access</li>
+                  <li>• User management</li>
+                  <li>• Categories & items management</li>
+                  <li>• Transaction approval</li>
+                  <li>• All reports and analytics</li>
+                  <li>• Platform configuration</li>
+                </ul>
+              </div>
+              <div className="border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center mb-3">
+                  <SafeIcon icon={FiUsers} className="w-5 h-5 text-blue-600 mr-2" />
+                  <h4 className="font-semibold text-blue-800">Board Member</h4>
+                </div>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>• View dashboard</li>
+                  <li>• Create transactions</li>
+                  <li>• View all transactions</li>
+                  <li>• Generate reports</li>
+                  <li>• Monthly reports</li>
+                  <li>• Advanced filtering</li>
+                </ul>
+              </div>
+              <div className="border border-green-200 rounded-lg p-4">
+                <div className="flex items-center mb-3">
+                  <SafeIcon icon={FiMail} className="w-5 h-5 text-green-600 mr-2" />
+                  <h4 className="font-semibold text-green-800">Cashier</h4>
+                </div>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>• View dashboard</li>
+                  <li>• Approve/disapprove transactions</li>
+                  <li>• View pending transactions</li>
+                  <li>• Generate basic reports</li>
+                  <li>• Monthly reports</li>
+                  <li>• Transaction filtering</li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </motion.div>
       )}
 
@@ -616,41 +890,6 @@ const AdminPanel = () => {
                 </div>
               ))}
             </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Users Tab */}
-      {activeTab === 'users' && (
-        <motion.div
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">User Management</h2>
-          <div className="space-y-3">
-            {users && users.length > 0 ? users.map((userItem) => (
-              <div key={userItem.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <span className="font-medium text-gray-900">{userItem.name}</span>
-                  <span className="ml-2 text-sm text-gray-600">({userItem.email})</span>
-                  <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                    userItem.role === 'admin' 
-                      ? 'bg-red-100 text-red-800' 
-                      : userItem.role === 'board' 
-                      ? 'bg-blue-100 text-blue-800' 
-                      : 'bg-green-100 text-green-800'
-                  }`}>
-                    {userItem.role}
-                  </span>
-                </div>
-              </div>
-            )) : (
-              <div className="text-center py-8">
-                <p className="text-gray-600">No users found</p>
-              </div>
-            )}
           </div>
         </motion.div>
       )}

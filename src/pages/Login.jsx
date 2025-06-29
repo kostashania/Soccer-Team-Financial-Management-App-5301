@@ -26,11 +26,12 @@ const Login = () => {
     try {
       const result = await login(email, password);
       if (result.success) {
-        toast.success('Login successful!');
+        // Success toast is handled in AuthContext
       } else {
         toast.error(result.error || 'Login failed');
       }
     } catch (error) {
+      console.error('Login submit error:', error);
       toast.error('An error occurred during login');
     } finally {
       setLoading(false);
@@ -42,6 +43,11 @@ const Login = () => {
     { email: 'board@team.com', role: 'Board Member', password: 'password' },
     { email: 'cashier@team.com', role: 'Cashier', password: 'password' }
   ];
+
+  const handleDemoLogin = (demoUser) => {
+    setEmail(demoUser.email);
+    setPassword(demoUser.password);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -120,9 +126,9 @@ const Login = () => {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  <SafeIcon 
-                    icon={showPassword ? FiEyeOff : FiEye} 
-                    className="h-5 w-5 text-gray-400 hover:text-gray-600" 
+                  <SafeIcon
+                    icon={showPassword ? FiEyeOff : FiEye}
+                    className="h-5 w-5 text-gray-400 hover:text-gray-600"
                   />
                 </button>
               </div>
@@ -161,16 +167,26 @@ const Login = () => {
             {demoUsers.map((user, index) => (
               <button
                 key={index}
-                onClick={() => {
-                  setEmail(user.email);
-                  setPassword(user.password);
-                }}
+                onClick={() => handleDemoLogin(user)}
                 className="w-full text-left px-3 py-2 text-sm bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+                type="button"
               >
                 <div className="font-medium text-gray-900">{user.role}</div>
                 <div className="text-gray-600">{user.email}</div>
+                <div className="text-xs text-gray-500">Password: {user.password}</div>
               </button>
             ))}
+          </div>
+
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="flex items-start">
+              <SafeIcon icon={FiLock} className="w-4 h-4 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
+              <div className="text-xs text-blue-800">
+                <p className="font-medium">Demo Login Information:</p>
+                <p>All users use the password: <code className="bg-blue-100 px-1 rounded">password</code></p>
+                <p>Click any demo user above to auto-fill the form.</p>
+              </div>
+            </div>
           </div>
         </motion.div>
       </motion.div>

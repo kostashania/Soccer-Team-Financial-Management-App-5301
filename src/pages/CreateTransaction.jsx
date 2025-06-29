@@ -32,10 +32,10 @@ const CreateTransaction = () => {
   // Filter categories based on selected type
   const filteredCategories = categories.filter(cat => cat.type === watchedType);
   
-  // Filter items based on selected category
+  // Filter items based on selected category - compare UUID strings directly
   const filteredItems = items.filter(item => {
-    console.log('Filtering items. Item categoryId:', item.categoryId, 'Selected categoryId:', watchedCategory, 'Match:', item.categoryId === parseInt(watchedCategory));
-    return item.categoryId === parseInt(watchedCategory);
+    console.log('Filtering items. Item categoryId:', item.categoryId, 'Selected categoryId:', watchedCategory, 'Match:', item.categoryId === watchedCategory);
+    return item.categoryId === watchedCategory; // Direct string comparison for UUIDs
   });
 
   console.log('All categories:', categories);
@@ -59,8 +59,8 @@ const CreateTransaction = () => {
     try {
       const transactionData = {
         type: data.type,
-        categoryId: parseInt(data.categoryId),
-        itemId: parseInt(data.itemId),
+        categoryId: data.categoryId, // Keep as UUID string
+        itemId: data.itemId, // Keep as UUID string
         amount: parseFloat(data.amount),
         description: data.description,
         status: data.status,
