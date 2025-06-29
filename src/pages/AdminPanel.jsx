@@ -9,11 +9,11 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { getDatabaseInfo, testConnection } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
-const { FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink, FiDatabase, FiWifi, FiWifiOff, FiRefreshCw, FiInfo, FiEdit3, FiSave, FiX, FiUserPlus, FiMail, FiShield, FiLock } = FiIcons;
+const { FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink, FiDatabase, FiWifi, FiWifiOff, FiRefreshCw, FiInfo, FiEdit3, FiSave, FiX, FiUserPlus, FiMail, FiShield, FiLock, FiGlobe, FiSearch } = FiIcons;
 
 const AdminPanel = () => {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, getAllTranslations } = useLanguage();
   const {
     categories,
     items,
@@ -43,6 +43,7 @@ const AdminPanel = () => {
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
+  const [translationSearch, setTranslationSearch] = useState('');
 
   const categoryForm = useForm();
   const itemForm = useForm();
@@ -168,9 +169,27 @@ const AdminPanel = () => {
 
   const disapprovedTransactions = transactions.filter(t => t.approvalStatus === 'disapproved');
 
+  // Get all translations for the translation management tab
+  const allTranslations = getAllTranslations();
+  const translationKeys = Object.keys(allTranslations.en || {});
+  
+  // Filter translations based on search
+  const filteredTranslationKeys = translationKeys.filter(key => {
+    const englishText = allTranslations.en[key] || '';
+    const greekText = allTranslations.el[key] || '';
+    const searchLower = translationSearch.toLowerCase();
+    
+    return (
+      key.toLowerCase().includes(searchLower) ||
+      englishText.toLowerCase().includes(searchLower) ||
+      greekText.toLowerCase().includes(searchLower)
+    );
+  });
+
   const tabs = [
     { id: 'database', label: 'Database', icon: FiDatabase },
     { id: 'users', label: t('userManagement'), icon: FiUsers },
+    { id: 'translations', label: t('translations'), icon: FiGlobe },
     { id: 'categories', label: 'Categories', icon: FiTag },
     { id: 'items', label: 'Items', icon: FiList },
     { id: 'buttons', label: 'Platform Buttons', icon: FiExternalLink },
@@ -190,12 +209,12 @@ const AdminPanel = () => {
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
+        <nav className="-mb-px flex space-x-8 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -207,6 +226,126 @@ const AdminPanel = () => {
           ))}
         </nav>
       </div>
+
+      {/* Translation Management Tab */}
+      {activeTab === 'translations' && (
+        <motion.div
+          className="space-y-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <SafeIcon icon={FiGlobe} className="w-6 h-6 text-primary-600 mr-3" />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">{t('translationManagement')}</h2>
+                  <p className="text-sm text-gray-600">All UI elements and their Greek translations</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <span>Total: {translationKeys.length} items</span>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="mb-6">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <SafeIcon icon={FiSearch} className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  value={translationSearch}
+                  onChange={(e) => setTranslationSearch(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder={t('searchTranslations')}
+                />
+              </div>
+            </div>
+
+            {/* Translation Table */}
+            <div className="overflow-hidden border border-gray-200 rounded-lg">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {t('uiElement')}
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {t('englishText')}
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {t('greekTranslation')}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredTranslationKeys.map((key, index) => (
+                      <tr key={key} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded">
+                            {key}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900">
+                            {allTranslations.en[key] || '-'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900 font-medium">
+                            {allTranslations.el[key] || '-'}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {filteredTranslationKeys.length === 0 && translationSearch && (
+              <div className="text-center py-8">
+                <p className="text-gray-600">No translations found matching "{translationSearch}"</p>
+              </div>
+            )}
+
+            {/* Translation Statistics */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <SafeIcon icon={FiGlobe} className="w-8 h-8 text-blue-600 mr-3" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-900">Total Translations</p>
+                    <p className="text-2xl font-bold text-blue-600">{translationKeys.length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <SafeIcon icon={FiSettings} className="w-8 h-8 text-green-600 mr-3" />
+                  <div>
+                    <p className="text-sm font-medium text-green-900">English Items</p>
+                    <p className="text-2xl font-bold text-green-600">{Object.keys(allTranslations.en || {}).length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <SafeIcon icon={FiGlobe} className="w-8 h-8 text-purple-600 mr-3" />
+                  <div>
+                    <p className="text-sm font-medium text-purple-900">Greek Items</p>
+                    <p className="text-2xl font-bold text-purple-600">{Object.keys(allTranslations.el || {}).length}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Database Tab */}
       {activeTab === 'database' && (

@@ -11,8 +11,10 @@ const Header = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
   const { language, changeLanguage, t } = useLanguage();
 
-  const toggleLanguage = () => {
-    changeLanguage(language === 'en' ? 'el' : 'en');
+  const handleLanguageToggle = () => {
+    const newLanguage = language === 'en' ? 'el' : 'en';
+    console.log('Toggling language from', language, 'to', newLanguage);
+    changeLanguage(newLanguage);
   };
 
   return (
@@ -39,7 +41,7 @@ const Header = ({ onMenuClick }) => {
         <div className="flex items-center space-x-4">
           {/* Language Toggle */}
           <button
-            onClick={toggleLanguage}
+            onClick={handleLanguageToggle}
             className="flex items-center space-x-2 p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
             title={`${t('language')}: ${language === 'en' ? t('english') : t('greek')}`}
           >
