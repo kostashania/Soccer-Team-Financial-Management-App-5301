@@ -9,32 +9,21 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { getDatabaseInfo, testConnection } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
-const { FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink, FiDatabase, FiWifi, FiWifiOff, FiRefreshCw, FiInfo, FiEdit3, FiSave, FiX, FiUserPlus, FiMail, FiShield, FiLock, FiGlobe, FiSearch } = FiIcons;
+const { 
+  FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink, 
+  FiDatabase, FiWifi, FiWifiOff, FiRefreshCw, FiInfo, FiEdit3, FiSave, 
+  FiX, FiUserPlus, FiMail, FiShield, FiLock, FiGlobe, FiSearch, 
+  FiAlertTriangle, FiEye 
+} = FiIcons;
 
 const AdminPanel = () => {
   const { user } = useAuth();
   const { t, getAllTranslations } = useLanguage();
   const {
-    categories,
-    items,
-    platformButtons,
-    transactions,
-    users,
-    connectionStatus,
-    addCategory,
-    updateCategory,
-    deleteCategory,
-    addItem,
-    updateItem,
-    deleteItem,
-    addPlatformButton,
-    deletePlatformButton,
-    deleteTransaction,
-    addUser,
-    updateUser,
-    deleteUser,
-    fetchData,
-    checkConnection
+    categories, items, platformButtons, transactions, users,
+    connectionStatus, addCategory, updateCategory, deleteCategory,
+    addItem, updateItem, deleteItem, addPlatformButton, deletePlatformButton,
+    deleteTransaction, addUser, updateUser, deleteUser, fetchData, checkConnection
   } = useData();
 
   const [activeTab, setActiveTab] = useState('database');
@@ -44,6 +33,16 @@ const AdminPanel = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [translationSearch, setTranslationSearch] = useState('');
+  
+  // Clear database states
+  const [showClearDbModal, setShowClearDbModal] = useState(false);
+  const [clearDbConfirmation, setClearDbConfirmation] = useState('');
+  const [clearingDb, setClearingDb] = useState(false);
+
+  // Delete transaction states
+  const [showDeleteTransactionModal, setShowDeleteTransactionModal] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState(null);
+  const [deleteTransactionConfirmation, setDeleteTransactionConfirmation] = useState('');
 
   const categoryForm = useForm();
   const itemForm = useForm();
@@ -118,9 +117,21 @@ const AdminPanel = () => {
     }
   };
 
-  const handleDeleteTransaction = (id) => {
-    if (confirm('Are you sure you want to delete this transaction?')) {
-      deleteTransaction(id);
+  const handleDeleteTransaction = (transaction) => {
+    setTransactionToDelete(transaction);
+    setDeleteTransactionConfirmation('');
+    setShowDeleteTransactionModal(true);
+  };
+
+  const confirmDeleteTransaction = () => {
+    if (deleteTransactionConfirmation.toLowerCase() === 'delete' && transactionToDelete) {
+      deleteTransaction(transactionToDelete.id);
+      setShowDeleteTransactionModal(false);
+      setTransactionToDelete(null);
+      setDeleteTransactionConfirmation('');
+      toast.success('Transaction deleted successfully');
+    } else {
+      toast.error('Please type "delete" to confirm');
     }
   };
 
@@ -145,6 +156,53 @@ const AdminPanel = () => {
     toast.loading('Refreshing data...');
     await fetchData();
     toast.dismiss();
+  };
+
+  // Clear database function
+  const handleClearDatabase = async () => {
+    if (clearDbConfirmation.toLowerCase() !== 'delete') {
+      toast.error('Please type "delete" to confirm database clearing');
+      return;
+    }
+
+    setClearingDb(true);
+    try {
+      // Import supabase client
+      const { default: supabase } = await import('../lib/supabase');
+
+      // Clear all tables except users
+      const tablesToClear = [
+        'transactions_stf2024',
+        'categories_stf2024', 
+        'items_stf2024',
+        'platform_buttons_stf2024'
+      ];
+
+      for (const table of tablesToClear) {
+        const { error } = await supabase
+          .from(table)
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+        
+        if (error) {
+          console.error(`Error clearing ${table}:`, error);
+          toast.error(`Failed to clear ${table}`);
+          return;
+        }
+      }
+
+      // Refresh data after clearing
+      await fetchData();
+      
+      setShowClearDbModal(false);
+      setClearDbConfirmation('');
+      toast.success('Database cleared successfully (users preserved)');
+    } catch (error) {
+      console.error('Error clearing database:', error);
+      toast.error('Failed to clear database');
+    } finally {
+      setClearingDb(false);
+    }
   };
 
   const startEditingCategory = (category) => {
@@ -172,7 +230,7 @@ const AdminPanel = () => {
   // Get all translations for the translation management tab
   const allTranslations = getAllTranslations();
   const translationKeys = Object.keys(allTranslations.en || {});
-  
+
   // Filter translations based on search
   const filteredTranslationKeys = translationKeys.filter(key => {
     const englishText = allTranslations.en[key] || '';
@@ -186,6 +244,16 @@ const AdminPanel = () => {
     );
   });
 
+  const getCategoryName = (categoryId) => {
+    const category = categories.find(c => c.id === categoryId);
+    return category?.name || 'Unknown';
+  };
+
+  const getItemName = (itemId) => {
+    const item = items.find(i => i.id === itemId);
+    return item?.name || 'Unknown';
+  };
+
   const tabs = [
     { id: 'database', label: 'Database', icon: FiDatabase },
     { id: 'users', label: t('userManagement'), icon: FiUsers },
@@ -193,8 +261,151 @@ const AdminPanel = () => {
     { id: 'categories', label: 'Categories', icon: FiTag },
     { id: 'items', label: 'Items', icon: FiList },
     { id: 'buttons', label: 'Platform Buttons', icon: FiExternalLink },
+    { id: 'transactions', label: 'All Transactions', icon: FiDatabase },
     { id: 'disapproved', label: 'Disapproved', icon: FiTrash2 }
   ];
+
+  // Clear Database Modal
+  const ClearDatabaseModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <motion.div
+        className="bg-white rounded-lg max-w-md w-full p-6"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="flex items-center mb-4">
+          <SafeIcon icon={FiAlertTriangle} className="w-6 h-6 text-red-600 mr-3" />
+          <h2 className="text-xl font-bold text-gray-900">Clear Database</h2>
+        </div>
+        
+        <div className="mb-6">
+          <p className="text-gray-700 mb-4">
+            <strong>⚠️ WARNING:</strong> This action will permanently delete ALL data except users:
+          </p>
+          <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 mb-4">
+            <li>All transactions ({transactions.length} records)</li>
+            <li>All categories ({categories.length} records)</li>
+            <li>All items ({items.length} records)</li>
+            <li>All platform buttons ({platformButtons.length} records)</li>
+          </ul>
+          <p className="text-sm text-green-600 mb-4">
+            ✅ Users will be preserved ({users.length} users)
+          </p>
+          <p className="text-red-600 font-medium">
+            This action cannot be undone!
+          </p>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Type "delete" to confirm:
+          </label>
+          <input
+            type="text"
+            value={clearDbConfirmation}
+            onChange={(e) => setClearDbConfirmation(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            placeholder="Type 'delete' here"
+          />
+        </div>
+
+        <div className="flex space-x-3">
+          <button
+            onClick={handleClearDatabase}
+            disabled={clearingDb || clearDbConfirmation.toLowerCase() !== 'delete'}
+            className="flex-1 flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <SafeIcon icon={FiTrash2} className="w-4 h-4 mr-2" />
+            {clearingDb ? 'Clearing...' : 'Clear Database'}
+          </button>
+          <button
+            onClick={() => {
+              setShowClearDbModal(false);
+              setClearDbConfirmation('');
+            }}
+            className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+
+  // Delete Transaction Modal
+  const DeleteTransactionModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <motion.div
+        className="bg-white rounded-lg max-w-md w-full p-6"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="flex items-center mb-4">
+          <SafeIcon icon={FiAlertTriangle} className="w-6 h-6 text-red-600 mr-3" />
+          <h2 className="text-xl font-bold text-gray-900">Delete Transaction</h2>
+        </div>
+        
+        {transactionToDelete && (
+          <div className="mb-6">
+            <p className="text-gray-700 mb-4">
+              <strong>⚠️ WARNING:</strong> You are about to permanently delete this transaction:
+            </p>
+            <div className="bg-gray-50 p-4 rounded-lg mb-4">
+              <p className="font-medium text-gray-900">{transactionToDelete.description}</p>
+              <p className="text-sm text-gray-600">
+                Amount: ${parseFloat(transactionToDelete.amount || 0).toLocaleString()}
+              </p>
+              <p className="text-sm text-gray-600">
+                Category: {getCategoryName(transactionToDelete.categoryId)}
+              </p>
+              <p className="text-sm text-gray-600">
+                Submitted by: {transactionToDelete.submittedBy}
+              </p>
+            </div>
+            <p className="text-red-600 font-medium">
+              This action cannot be undone!
+            </p>
+          </div>
+        )}
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Type "delete" to confirm:
+          </label>
+          <input
+            type="text"
+            value={deleteTransactionConfirmation}
+            onChange={(e) => setDeleteTransactionConfirmation(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            placeholder="Type 'delete' here"
+          />
+        </div>
+
+        <div className="flex space-x-3">
+          <button
+            onClick={confirmDeleteTransaction}
+            disabled={deleteTransactionConfirmation.toLowerCase() !== 'delete'}
+            className="flex-1 flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <SafeIcon icon={FiTrash2} className="w-4 h-4 mr-2" />
+            Delete Transaction
+          </button>
+          <button
+            onClick={() => {
+              setShowDeleteTransactionModal(false);
+              setTransactionToDelete(null);
+              setDeleteTransactionConfirmation('');
+            }}
+            className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -361,15 +572,17 @@ const AdminPanel = () => {
               <h2 className="text-lg font-semibold text-gray-900">Database Connection Status</h2>
               <div className="flex items-center space-x-2">
                 <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
-                  connectionStatus === 'connected' ? 'bg-green-100 text-green-800' :
-                  connectionStatus === 'disconnected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                  connectionStatus === 'connected' 
+                    ? 'bg-green-100 text-green-800' 
+                    : connectionStatus === 'disconnected' 
+                    ? 'bg-red-100 text-red-800' 
+                    : 'bg-yellow-100 text-yellow-800'
                 }`}>
                   <SafeIcon icon={connectionStatus === 'connected' ? FiWifi : FiWifiOff} className="w-4 h-4" />
                   <span className="capitalize">{connectionStatus}</span>
                 </div>
               </div>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Database URL</label>
@@ -384,7 +597,6 @@ const AdminPanel = () => {
                 </p>
               </div>
             </div>
-
             <div className="flex space-x-3">
               <button
                 onClick={handleTestConnection}
@@ -404,9 +616,18 @@ const AdminPanel = () => {
             </div>
           </div>
 
-          {/* Data Summary */}
+          {/* Data Summary with Clear Database */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Data Summary</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Data Summary</h2>
+              <button
+                onClick={() => setShowClearDbModal(true)}
+                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              >
+                <SafeIcon icon={FiTrash2} className="w-4 h-4 mr-2" />
+                Clear Database
+              </button>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <p className="text-2xl font-bold text-blue-600">{categories.length}</p>
@@ -429,6 +650,72 @@ const AdminPanel = () => {
                 <p className="text-sm text-gray-600">Users</p>
               </div>
             </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* All Transactions Tab */}
+      {activeTab === 'transactions' && (
+        <motion.div
+          className="space-y-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <SafeIcon icon={FiDatabase} className="w-6 h-6 text-primary-600 mr-3" />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">All Transactions ({transactions.length})</h2>
+                  <p className="text-sm text-gray-600">Manage and delete transactions</p>
+                </div>
+              </div>
+            </div>
+
+            {transactions.length === 0 ? (
+              <div className="text-center py-8">
+                <SafeIcon icon={FiDatabase} className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No transactions found</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {transactions.map((transaction) => (
+                  <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-1">
+                        <h3 className="font-medium text-gray-900">{transaction.description}</h3>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          transaction.type === 'income' ? 'bg-success-100 text-success-800' : 'bg-danger-100 text-danger-800'
+                        }`}>
+                          {transaction.type}
+                        </span>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          transaction.approvalStatus === 'approved' ? 'bg-green-100 text-green-800' :
+                          transaction.approvalStatus === 'disapproved' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {transaction.approvalStatus}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        <span>${parseFloat(transaction.amount || 0).toLocaleString()}</span>
+                        <span>{getCategoryName(transaction.categoryId)} • {getItemName(transaction.itemId)}</span>
+                        <span>By: {transaction.submittedBy}</span>
+                        <span>{new Date(transaction.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteTransaction(transaction)}
+                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+                      title="Delete Transaction"
+                    >
+                      <SafeIcon icon={FiTrash2} className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </motion.div>
       )}
@@ -465,7 +752,6 @@ const AdminPanel = () => {
                     <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.name.message}</p>
                   )}
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('emailAddress')} *
@@ -474,10 +760,7 @@ const AdminPanel = () => {
                     type="email"
                     {...userForm.register('email', {
                       required: t('emailRequired'),
-                      pattern: {
-                        value: /^\S+@\S+$/i,
-                        message: t('invalidEmail')
-                      }
+                      pattern: { value: /^\S+@\S+$/i, message: t('invalidEmail') }
                     })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     placeholder="user@example.com"
@@ -486,7 +769,6 @@ const AdminPanel = () => {
                     <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.email.message}</p>
                   )}
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('role')} *
@@ -504,7 +786,6 @@ const AdminPanel = () => {
                     <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.role.message}</p>
                   )}
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('password')} *
@@ -521,7 +802,6 @@ const AdminPanel = () => {
                   )}
                 </div>
               </div>
-
               <div className="flex space-x-3">
                 <button
                   type="submit"
@@ -560,15 +840,15 @@ const AdminPanel = () => {
                 >
                   <div className="flex items-center space-x-4">
                     <div className={`p-2 rounded-full ${
-                      userItem.role === 'admin' ? 'bg-red-100' :
+                      userItem.role === 'admin' ? 'bg-red-100' : 
                       userItem.role === 'board' ? 'bg-blue-100' : 'bg-green-100'
                     }`}>
-                      <SafeIcon
-                        icon={userItem.role === 'admin' ? FiShield : userItem.role === 'board' ? FiUsers : FiMail}
+                      <SafeIcon 
+                        icon={userItem.role === 'admin' ? FiShield : userItem.role === 'board' ? FiUsers : FiMail} 
                         className={`w-5 h-5 ${
-                          userItem.role === 'admin' ? 'text-red-600' :
+                          userItem.role === 'admin' ? 'text-red-600' : 
                           userItem.role === 'board' ? 'text-blue-600' : 'text-green-600'
-                        }`}
+                        }`} 
                       />
                     </div>
                     <div>
@@ -580,11 +860,10 @@ const AdminPanel = () => {
                       </div>
                     </div>
                     <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                      userItem.role === 'admin' ? 'bg-red-100 text-red-800' :
+                      userItem.role === 'admin' ? 'bg-red-100 text-red-800' : 
                       userItem.role === 'board' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
                     }`}>
-                      {userItem.role === 'admin' ? t('admin') :
-                       userItem.role === 'board' ? t('boardMember') : t('cashier')}
+                      {userItem.role === 'admin' ? t('admin') : userItem.role === 'board' ? t('boardMember') : t('cashier')}
                     </span>
                   </div>
                   <div className="flex space-x-2">
@@ -980,7 +1259,7 @@ const AdminPanel = () => {
                     </p>
                   </div>
                   <button
-                    onClick={() => handleDeleteTransaction(transaction.id)}
+                    onClick={() => handleDeleteTransaction(transaction)}
                     className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
                   >
                     Delete
@@ -991,6 +1270,10 @@ const AdminPanel = () => {
           )}
         </motion.div>
       )}
+
+      {/* Modals */}
+      {showClearDbModal && <ClearDatabaseModal />}
+      {showDeleteTransactionModal && <DeleteTransactionModal />}
     </div>
   );
 };
