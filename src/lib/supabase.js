@@ -18,13 +18,14 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Test connection function
 export const testConnection = async () => {
   try {
+    // Simple select query to test connection - just get one record
     const { data, error } = await supabase
       .from('categories_stf2024')
-      .select('count(*)', { count: 'exact' })
+      .select('id')
       .limit(1)
-    
+
     if (error) throw error
-    
+
     return { success: true, message: 'Connected successfully' }
   } catch (error) {
     console.error('Connection test failed:', error)
@@ -40,7 +41,7 @@ export const getDatabaseInfo = () => {
     schema: 'public', // Supabase uses public schema by default
     tables: [
       'categories_stf2024',
-      'items_stf2024', 
+      'items_stf2024',
       'transactions_stf2024',
       'platform_buttons_stf2024',
       'users_stf2024'
