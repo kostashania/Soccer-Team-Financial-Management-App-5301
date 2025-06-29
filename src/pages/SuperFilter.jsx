@@ -3,12 +3,14 @@ import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../components/common/SafeIcon';
 import { useData } from '../contexts/DataContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { format } from 'date-fns';
 
 const { FiFilter, FiDownload, FiRefreshCw, FiSearch } = FiIcons;
 
 const SuperFilter = () => {
   const { transactions, categories, items, users } = useData();
+  const { t } = useLanguage();
   const [filters, setFilters] = useState({
     dateFrom: '',
     dateTo: '',
@@ -68,10 +70,8 @@ const SuperFilter = () => {
 
   const exportToCSV = () => {
     const headers = [
-      'Date', 'Type', 'Category', 'Item', 'Description', 'Amount', 
-      'Status', 'Official', 'Count', 'Submitted By', 'Approval Status'
+      'Date', 'Type', 'Category', 'Item', 'Description', 'Amount', 'Status', 'Official', 'Count', 'Submitted By', 'Approval Status'
     ];
-    
     const csvData = filteredTransactions.map(t => [
       format(new Date(t.createdAt), 'yyyy-MM-dd'),
       t.type,
@@ -104,13 +104,8 @@ const SuperFilter = () => {
     exportToCSV(); // Fallback to CSV for now
   };
 
-  const filteredCategories = filters.type ? 
-    categories.filter(cat => cat.type === filters.type) : 
-    categories;
-
-  const filteredItems = filters.categoryId ? 
-    items.filter(item => item.categoryId === parseInt(filters.categoryId)) : 
-    items;
+  const filteredCategories = filters.type ? categories.filter(cat => cat.type === filters.type) : categories;
+  const filteredItems = filters.categoryId ? items.filter(item => item.categoryId === parseInt(filters.categoryId)) : items;
 
   return (
     <div className="space-y-6">
@@ -121,7 +116,7 @@ const SuperFilter = () => {
       >
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Super Filter</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{t('superFilter')}</h1>
             <p className="mt-2 text-gray-600">Advanced transaction filtering and export</p>
           </div>
           <div className="flex space-x-2">
@@ -153,7 +148,7 @@ const SuperFilter = () => {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
             <SafeIcon icon={FiFilter} className="w-5 h-5 text-gray-600 mr-2" />
-            <h2 className="text-lg font-semibold text-gray-900">Advanced Filters</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Advanced {t('filter')}</h2>
           </div>
           <button
             onClick={clearFilters}
@@ -188,21 +183,21 @@ const SuperFilter = () => {
 
           {/* Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('type')}</label>
             <select
               value={filters.type}
               onChange={(e) => setFilters({ ...filters, type: e.target.value, categoryId: '', itemId: '' })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="">All Types</option>
-              <option value="income">Income</option>
-              <option value="expense">Expense</option>
+              <option value="income">{t('income')}</option>
+              <option value="expense">{t('expense')}</option>
             </select>
           </div>
 
           {/* Category */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('category')}</label>
             <select
               value={filters.categoryId}
               onChange={(e) => setFilters({ ...filters, categoryId: e.target.value, itemId: '' })}
@@ -219,7 +214,7 @@ const SuperFilter = () => {
 
           {/* Item */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Item</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('item')}</label>
             <select
               value={filters.itemId}
               onChange={(e) => setFilters({ ...filters, itemId: e.target.value })}
@@ -237,44 +232,44 @@ const SuperFilter = () => {
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Payment Status</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Payment {t('status')}</label>
             <select
               value={filters.status}
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="">All Status</option>
-              <option value="paid">Paid</option>
-              <option value="pending">Pending</option>
+              <option value="paid">{t('paid')}</option>
+              <option value="pending">{t('pending')}</option>
             </select>
           </div>
 
           {/* Approval Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Approval Status</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Approval {t('status')}</label>
             <select
               value={filters.approvalStatus}
               onChange={(e) => setFilters({ ...filters, approvalStatus: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="">All Approvals</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="disapproved">Disapproved</option>
+              <option value="pending">{t('pending')}</option>
+              <option value="approved">{t('approved')}</option>
+              <option value="disapproved">{t('disapproved')}</option>
             </select>
           </div>
 
           {/* Official */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Official</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('official')}</label>
             <select
               value={filters.official}
               onChange={(e) => setFilters({ ...filters, official: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="">All</option>
-              <option value="true">Official</option>
-              <option value="false">Unofficial</option>
+              <option value="true">{t('official')}</option>
+              <option value="false">{t('unofficial')}</option>
             </select>
           </div>
 
@@ -322,10 +317,9 @@ const SuperFilter = () => {
           <div className="flex items-center">
             <SafeIcon icon={FiSearch} className="w-5 h-5 text-gray-600 mr-2" />
             <h2 className="text-lg font-semibold text-gray-900">
-              Filter Results ({filteredTransactions.length} transactions)
+              Filter Results ({filteredTransactions.length} {t('transactions')})
             </h2>
           </div>
-          
           {filteredTransactions.length > 0 && (
             <div className="text-sm text-gray-600">
               Total Amount: ${filteredTransactions.reduce((sum, t) => 
@@ -352,7 +346,7 @@ const SuperFilter = () => {
                     <span className={`px-2 py-1 text-xs rounded-full ${
                       transaction.type === 'income' ? 'bg-success-100 text-success-800' : 'bg-danger-100 text-danger-800'
                     }`}>
-                      {transaction.type}
+                      {t(transaction.type)}
                     </span>
                   </div>
                   <div className="flex items-center space-x-4 text-sm text-gray-600">
@@ -361,10 +355,9 @@ const SuperFilter = () => {
                     <span>{format(new Date(transaction.createdAt), 'MMM d, yyyy')}</span>
                     <span className={`capitalize ${
                       transaction.approvalStatus === 'approved' ? 'text-success-600' :
-                      transaction.approvalStatus === 'disapproved' ? 'text-danger-600' :
-                      'text-warning-600'
+                      transaction.approvalStatus === 'disapproved' ? 'text-danger-600' : 'text-warning-600'
                     }`}>
-                      {transaction.approvalStatus}
+                      {t(transaction.approvalStatus)}
                     </span>
                   </div>
                 </div>
@@ -378,12 +371,12 @@ const SuperFilter = () => {
                     <span className={`px-1 py-0.5 text-xs rounded ${
                       transaction.status === 'paid' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
                     }`}>
-                      {transaction.status}
+                      {t(transaction.status)}
                     </span>
                     <span className={`px-1 py-0.5 text-xs rounded ${
                       transaction.official ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
                     }`}>
-                      {transaction.official ? 'Official' : 'Unofficial'}
+                      {transaction.official ? t('official') : t('unofficial')}
                     </span>
                     {transaction.count && (
                       <span className="px-1 py-0.5 text-xs rounded bg-green-100 text-green-700">

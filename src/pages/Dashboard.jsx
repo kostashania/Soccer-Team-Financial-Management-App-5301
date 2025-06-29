@@ -4,6 +4,7 @@ import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../components/common/SafeIcon';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { format } from 'date-fns';
 
 const { FiDollarSign, FiTrendingUp, FiTrendingDown, FiClock, FiCheckCircle, FiAlertCircle } = FiIcons;
@@ -11,48 +12,49 @@ const { FiDollarSign, FiTrendingUp, FiTrendingDown, FiClock, FiCheckCircle, FiAl
 const Dashboard = () => {
   const { user } = useAuth();
   const { transactions } = useData();
+  const { t } = useLanguage();
 
   const approvedTransactions = transactions.filter(t => t.approvalStatus === 'approved');
   const pendingTransactions = transactions.filter(t => t.approvalStatus === 'pending');
-  
+
   const totalIncome = approvedTransactions
     .filter(t => t.type === 'income' && t.count)
     .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
-    
+
   const totalExpenses = approvedTransactions
     .filter(t => t.type === 'expense' && t.count)
     .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
-    
+
   const currentBalance = totalIncome - totalExpenses;
-  
+
   const recentTransactions = transactions
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 5);
 
   const stats = [
     {
-      title: 'Current Balance',
+      title: t('currentBalance'),
       value: `$${currentBalance.toLocaleString()}`,
       icon: FiDollarSign,
       color: currentBalance >= 0 ? 'text-success-600' : 'text-danger-600',
       bgColor: currentBalance >= 0 ? 'bg-success-50' : 'bg-danger-50'
     },
     {
-      title: 'Total Income',
+      title: t('totalIncome'),
       value: `$${totalIncome.toLocaleString()}`,
       icon: FiTrendingUp,
       color: 'text-success-600',
       bgColor: 'bg-success-50'
     },
     {
-      title: 'Total Expenses',
+      title: t('totalExpenses'),
       value: `$${totalExpenses.toLocaleString()}`,
       icon: FiTrendingDown,
       color: 'text-danger-600',
       bgColor: 'bg-danger-50'
     },
     {
-      title: 'Pending Approvals',
+      title: t('pendingApprovals'),
       value: pendingTransactions.length,
       icon: FiClock,
       color: 'text-warning-600',
@@ -67,8 +69,8 @@ const Dashboard = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-gray-600">Welcome back, {user?.name}!</p>
+        <h1 className="text-3xl font-bold text-gray-900">{t('dashboard')}</h1>
+        <p className="mt-2 text-gray-600">{t('welcomeBack')}, {user?.name}!</p>
       </motion.div>
 
       {/* Stats Grid */}
@@ -102,11 +104,11 @@ const Dashboard = () => {
         transition={{ duration: 0.5, delay: 0.4 }}
       >
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Transactions</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t('recentTransactions')}</h2>
         </div>
         <div className="p-6">
           {recentTransactions.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No transactions yet</p>
+            <p className="text-gray-500 text-center py-8">{t('noTransactions')}</p>
           ) : (
             <div className="space-y-4">
               {recentTransactions.map((transaction) => (
@@ -115,11 +117,11 @@ const Dashboard = () => {
                     <div className={`p-2 rounded-full ${
                       transaction.type === 'income' ? 'bg-success-50' : 'bg-danger-50'
                     }`}>
-                      <SafeIcon 
-                        icon={transaction.type === 'income' ? FiTrendingUp : FiTrendingDown} 
+                      <SafeIcon
+                        icon={transaction.type === 'income' ? FiTrendingUp : FiTrendingDown}
                         className={`w-4 h-4 ${
                           transaction.type === 'income' ? 'text-success-600' : 'text-danger-600'
-                        }`} 
+                        }`}
                       />
                     </div>
                     <div className="ml-3">
@@ -136,16 +138,16 @@ const Dashboard = () => {
                       {transaction.type === 'income' ? '+' : '-'}${parseFloat(transaction.amount || 0).toLocaleString()}
                     </p>
                     <div className="flex items-center mt-1">
-                      <SafeIcon 
-                        icon={transaction.approvalStatus === 'approved' ? FiCheckCircle : FiAlertCircle} 
+                      <SafeIcon
+                        icon={transaction.approvalStatus === 'approved' ? FiCheckCircle : FiAlertCircle}
                         className={`w-3 h-3 mr-1 ${
                           transaction.approvalStatus === 'approved' ? 'text-success-500' : 'text-warning-500'
-                        }`} 
+                        }`}
                       />
                       <span className={`text-xs capitalize ${
                         transaction.approvalStatus === 'approved' ? 'text-success-600' : 'text-warning-600'
                       }`}>
-                        {transaction.approvalStatus}
+                        {t(transaction.approvalStatus)}
                       </span>
                     </div>
                   </div>

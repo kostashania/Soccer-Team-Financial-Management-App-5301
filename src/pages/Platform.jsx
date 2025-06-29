@@ -3,11 +3,13 @@ import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../components/common/SafeIcon';
 import { useData } from '../contexts/DataContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const { FiExternalLink, FiLink } = FiIcons;
 
 const Platform = () => {
   const { platformButtons } = useData();
+  const { t } = useLanguage();
 
   const handleButtonClick = (url) => {
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -20,7 +22,7 @@ const Platform = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-3xl font-bold text-gray-900">Platform</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t('platform')}</h1>
         <p className="mt-2 text-gray-600">Quick access to external tools and resources</p>
       </motion.div>
 
@@ -59,9 +61,9 @@ const Platform = () => {
                     {button.url}
                   </p>
                 </div>
-                <SafeIcon 
-                  icon={FiExternalLink} 
-                  className="w-5 h-5 text-primary-500 group-hover:text-primary-700 transition-colors" 
+                <SafeIcon
+                  icon={FiExternalLink}
+                  className="w-5 h-5 text-primary-500 group-hover:text-primary-700 transition-colors"
                 />
               </motion.button>
             ))}

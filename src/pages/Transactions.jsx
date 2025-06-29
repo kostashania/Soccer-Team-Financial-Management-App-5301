@@ -3,12 +3,14 @@ import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../components/common/SafeIcon';
 import { useData } from '../contexts/DataContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { format } from 'date-fns';
 
 const { FiFilter, FiDownload, FiEye, FiDollarSign, FiCalendar, FiUser } = FiIcons;
 
 const Transactions = () => {
   const { transactions, categories, items } = useData();
+  const { t } = useLanguage();
   const [filters, setFilters] = useState({
     type: '',
     status: '',
@@ -75,7 +77,7 @@ const Transactions = () => {
       >
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{t('transactions')}</h1>
             <p className="mt-2 text-gray-600">View and manage all transactions</p>
           </div>
           <button
@@ -83,7 +85,7 @@ const Transactions = () => {
             className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
           >
             <SafeIcon icon={FiDownload} className="w-4 h-4 mr-2" />
-            Export CSV
+            {t('export')} CSV
           </button>
         </div>
       </motion.div>
@@ -97,9 +99,8 @@ const Transactions = () => {
       >
         <div className="flex items-center mb-4">
           <SafeIcon icon={FiFilter} className="w-5 h-5 text-gray-600 mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t('filter')}</h2>
         </div>
-        
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <select
             value={filters.type}
@@ -107,8 +108,8 @@ const Transactions = () => {
             className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           >
             <option value="">All Types</option>
-            <option value="income">Income</option>
-            <option value="expense">Expense</option>
+            <option value="income">{t('income')}</option>
+            <option value="expense">{t('expense')}</option>
           </select>
 
           <select
@@ -117,8 +118,8 @@ const Transactions = () => {
             className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           >
             <option value="">All Status</option>
-            <option value="paid">Paid</option>
-            <option value="pending">Pending</option>
+            <option value="paid">{t('paid')}</option>
+            <option value="pending">{t('pending')}</option>
           </select>
 
           <select
@@ -127,9 +128,9 @@ const Transactions = () => {
             className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           >
             <option value="">All Approvals</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="disapproved">Disapproved</option>
+            <option value="pending">{t('pending')}</option>
+            <option value="approved">{t('approved')}</option>
+            <option value="disapproved">{t('disapproved')}</option>
           </select>
 
           <select
@@ -138,8 +139,8 @@ const Transactions = () => {
             className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           >
             <option value="">All Official</option>
-            <option value="true">Official</option>
-            <option value="false">Unofficial</option>
+            <option value="true">{t('official')}</option>
+            <option value="false">{t('unofficial')}</option>
           </select>
 
           <select
@@ -163,10 +164,9 @@ const Transactions = () => {
       >
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">
-            All Transactions ({filteredTransactions.length})
+            All {t('transactions')} ({filteredTransactions.length})
           </h2>
         </div>
-
         <div className="p-6">
           {filteredTransactions.length === 0 ? (
             <div className="text-center py-8">
@@ -175,21 +175,18 @@ const Transactions = () => {
           ) : (
             <div className="space-y-4">
               {filteredTransactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                >
+                <div key={transaction.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-4 mb-2">
                         <div className={`p-2 rounded-full ${
                           transaction.type === 'income' ? 'bg-success-50' : 'bg-danger-50'
                         }`}>
-                          <SafeIcon 
-                            icon={FiDollarSign} 
+                          <SafeIcon
+                            icon={FiDollarSign}
                             className={`w-4 h-4 ${
                               transaction.type === 'income' ? 'text-success-600' : 'text-danger-600'
-                            }`} 
+                            }`}
                           />
                         </div>
                         <div>
@@ -199,7 +196,6 @@ const Transactions = () => {
                           </p>
                         </div>
                       </div>
-
                       <div className="flex items-center space-x-6 text-sm text-gray-600">
                         <div className="flex items-center">
                           <SafeIcon icon={FiDollarSign} className="w-4 h-4 mr-1" />
@@ -223,17 +219,17 @@ const Transactions = () => {
                             transaction.approvalStatus === 'disapproved' ? 'bg-danger-100 text-danger-800' :
                             'bg-warning-100 text-warning-800'
                           }`}>
-                            {transaction.approvalStatus}
+                            {t(transaction.approvalStatus)}
                           </span>
                           <span className={`px-2 py-1 text-xs rounded-full ${
                             transaction.status === 'paid' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
                           }`}>
-                            {transaction.status}
+                            {t(transaction.status)}
                           </span>
                           <span className={`px-2 py-1 text-xs rounded-full ${
                             transaction.official ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
                           }`}>
-                            {transaction.official ? 'Official' : 'Unofficial'}
+                            {transaction.official ? t('official') : t('unofficial')}
                           </span>
                           {transaction.count && (
                             <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">

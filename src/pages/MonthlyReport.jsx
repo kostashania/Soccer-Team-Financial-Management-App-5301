@@ -3,17 +3,19 @@ import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../components/common/SafeIcon';
 import { useData } from '../contexts/DataContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { format, startOfMonth, endOfMonth, isSameMonth } from 'date-fns';
 
 const { FiCalendar, FiDownload, FiTrendingUp, FiTrendingDown, FiDollarSign } = FiIcons;
 
 const MonthlyReport = () => {
   const { transactions, categories } = useData();
+  const { t } = useLanguage();
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const approvedTransactions = transactions.filter(t => t.approvalStatus === 'approved');
-  
-  const monthlyTransactions = approvedTransactions.filter(transaction => 
+
+  const monthlyTransactions = approvedTransactions.filter(transaction =>
     isSameMonth(new Date(transaction.createdAt), selectedDate)
   );
 
@@ -29,23 +31,24 @@ const MonthlyReport = () => {
 
   const getCategoryBreakdown = () => {
     const breakdown = {};
+
     monthlyTransactions.forEach(transaction => {
       const category = categories.find(c => c.id === transaction.categoryId);
       const categoryName = category?.name || 'Unknown';
-      
+
       if (!breakdown[categoryName]) {
         breakdown[categoryName] = { income: 0, expense: 0, transactions: [] };
       }
-      
+
       breakdown[categoryName].transactions.push(transaction);
-      
+
       if (transaction.type === 'income') {
         breakdown[categoryName].income += parseFloat(transaction.amount || 0);
       } else {
         breakdown[categoryName].expense += parseFloat(transaction.amount || 0);
       }
     });
-    
+
     return breakdown;
   };
 
@@ -61,7 +64,7 @@ const MonthlyReport = () => {
       categories: categoryBreakdown,
       transactionCount: monthlyTransactions.length
     };
-    
+
     // For now, we'll create a simple text report
     const reportText = `
 Monthly Financial Report - ${reportData.month}
@@ -100,7 +103,7 @@ ${Object.entries(categoryBreakdown).map(([category, data]) =>
       >
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Monthly Report</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{t('monthlyReport')}</h1>
             <p className="mt-2 text-gray-600">Detailed monthly financial analysis</p>
           </div>
           <div className="flex items-center space-x-4">
@@ -115,7 +118,7 @@ ${Object.entries(categoryBreakdown).map(([category, data]) =>
               className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
             >
               <SafeIcon icon={FiDownload} className="w-4 h-4 mr-2" />
-              Export Report
+              {t('export')} Report
             </button>
           </div>
         </div>
@@ -140,7 +143,7 @@ ${Object.entries(categoryBreakdown).map(([category, data]) =>
             <div className="p-4 bg-success-50 rounded-lg mb-3">
               <SafeIcon icon={FiTrendingUp} className="w-8 h-8 text-success-600 mx-auto" />
             </div>
-            <p className="text-sm font-medium text-gray-600">Total Income</p>
+            <p className="text-sm font-medium text-gray-600">{t('totalIncome')}</p>
             <p className="text-2xl font-bold text-success-600">
               ${monthlyIncome.toLocaleString()}
             </p>
@@ -150,24 +153,21 @@ ${Object.entries(categoryBreakdown).map(([category, data]) =>
             <div className="p-4 bg-danger-50 rounded-lg mb-3">
               <SafeIcon icon={FiTrendingDown} className="w-8 h-8 text-danger-600 mx-auto" />
             </div>
-            <p className="text-sm font-medium text-gray-600">Total Expenses</p>
+            <p className="text-sm font-medium text-gray-600">{t('totalExpenses')}</p>
             <p className="text-2xl font-bold text-danger-600">
               ${monthlyExpenses.toLocaleString()}
             </p>
           </div>
 
           <div className="text-center">
-            <div className={`p-4 rounded-lg mb-3 ${
-              netBalance >= 0 ? 'bg-success-50' : 'bg-danger-50'
-            }`}>
-              <SafeIcon icon={FiDollarSign} className={`w-8 h-8 mx-auto ${
-                netBalance >= 0 ? 'text-success-600' : 'text-danger-600'
-              }`} />
+            <div className={`p-4 rounded-lg mb-3 ${netBalance >= 0 ? 'bg-success-50' : 'bg-danger-50'}`}>
+              <SafeIcon
+                icon={FiDollarSign}
+                className={`w-8 h-8 mx-auto ${netBalance >= 0 ? 'text-success-600' : 'text-danger-600'}`}
+              />
             </div>
             <p className="text-sm font-medium text-gray-600">Net Balance</p>
-            <p className={`text-2xl font-bold ${
-              netBalance >= 0 ? 'text-success-600' : 'text-danger-600'
-            }`}>
+            <p className={`text-2xl font-bold ${netBalance >= 0 ? 'text-success-600' : 'text-danger-600'}`}>
               ${netBalance.toLocaleString()}
             </p>
           </div>
@@ -176,7 +176,7 @@ ${Object.entries(categoryBreakdown).map(([category, data]) =>
             <div className="p-4 bg-primary-50 rounded-lg mb-3">
               <SafeIcon icon={FiCalendar} className="w-8 h-8 text-primary-600 mx-auto" />
             </div>
-            <p className="text-sm font-medium text-gray-600">Transactions</p>
+            <p className="text-sm font-medium text-gray-600">{t('transactions')}</p>
             <p className="text-2xl font-bold text-primary-600">
               {monthlyTransactions.length}
             </p>
@@ -194,7 +194,6 @@ ${Object.entries(categoryBreakdown).map(([category, data]) =>
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Category Breakdown</h2>
         </div>
-        
         <div className="p-6">
           {Object.keys(categoryBreakdown).length === 0 ? (
             <div className="text-center py-8">
@@ -205,16 +204,15 @@ ${Object.entries(categoryBreakdown).map(([category, data]) =>
               {Object.entries(categoryBreakdown).map(([category, data]) => (
                 <div key={category} className="border border-gray-200 rounded-lg p-4">
                   <h3 className="font-semibold text-gray-900 mb-4">{category}</h3>
-                  
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div className="text-center">
-                      <p className="text-sm text-gray-600">Income</p>
+                      <p className="text-sm text-gray-600">{t('income')}</p>
                       <p className="text-lg font-semibold text-success-600">
                         ${data.income.toLocaleString()}
                       </p>
                     </div>
                     <div className="text-center">
-                      <p className="text-sm text-gray-600">Expenses</p>
+                      <p className="text-sm text-gray-600">{t('expense')}</p>
                       <p className="text-lg font-semibold text-danger-600">
                         ${data.expense.toLocaleString()}
                       </p>
@@ -228,7 +226,7 @@ ${Object.entries(categoryBreakdown).map(([category, data]) =>
                       </p>
                     </div>
                     <div className="text-center">
-                      <p className="text-sm text-gray-600">Transactions</p>
+                      <p className="text-sm text-gray-600">{t('transactions')}</p>
                       <p className="text-lg font-semibold text-gray-900">
                         {data.transactions.length}
                       </p>

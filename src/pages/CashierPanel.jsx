@@ -4,6 +4,7 @@ import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../components/common/SafeIcon';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -12,13 +13,14 @@ const { FiCheckCircle, FiXCircle, FiEye, FiDollarSign, FiCalendar, FiUser, FiFil
 const CashierPanel = () => {
   const { user } = useAuth();
   const { transactions, updateTransaction, categories, items } = useData();
+  const { t } = useLanguage();
   const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   // Only show pending transactions for approval
   const pendingTransactions = transactions.filter(t => t.approvalStatus === 'pending');
 
   const handleApprove = (transactionId) => {
-    updateTransaction(transactionId, { 
+    updateTransaction(transactionId, {
       approvalStatus: 'approved',
       approvedBy: user?.name,
       approvedAt: new Date().toISOString()
@@ -27,7 +29,7 @@ const CashierPanel = () => {
   };
 
   const handleDisapprove = (transactionId) => {
-    updateTransaction(transactionId, { 
+    updateTransaction(transactionId, {
       approvalStatus: 'disapproved',
       disapprovedBy: user?.name,
       disapprovedAt: new Date().toISOString()
@@ -70,15 +72,15 @@ const CashierPanel = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-600">Type</label>
+                  <label className="block text-sm font-medium text-gray-600">{t('type')}</label>
                   <p className={`text-lg font-semibold capitalize ${
                     transaction.type === 'income' ? 'text-success-600' : 'text-danger-600'
                   }`}>
-                    {transaction.type}
+                    {t(transaction.type)}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-600">Amount</label>
+                  <label className="block text-sm font-medium text-gray-600">{t('amount')}</label>
                   <p className="text-lg font-semibold text-gray-900">
                     ${parseFloat(transaction.amount || 0).toLocaleString()}
                   </p>
@@ -86,28 +88,28 @@ const CashierPanel = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-600">Description</label>
+                <label className="block text-sm font-medium text-gray-600">{t('description')}</label>
                 <p className="text-gray-900">{transaction.description}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-600">Category</label>
+                  <label className="block text-sm font-medium text-gray-600">{t('category')}</label>
                   <p className="text-gray-900">{getCategoryName(transaction.categoryId)}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-600">Item</label>
+                  <label className="block text-sm font-medium text-gray-600">{t('item')}</label>
                   <p className="text-gray-900">{getItemName(transaction.itemId)}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-600">Status</label>
+                  <label className="block text-sm font-medium text-gray-600">{t('status')}</label>
                   <p className={`capitalize ${
                     transaction.status === 'paid' ? 'text-success-600' : 'text-warning-600'
                   }`}>
-                    {transaction.status}
+                    {t(transaction.status)}
                   </p>
                 </div>
                 <div>
@@ -118,7 +120,7 @@ const CashierPanel = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-600">Official</label>
+                  <label className="block text-sm font-medium text-gray-600">{t('official')}</label>
                   <p className="text-gray-900">{transaction.official ? 'Yes' : 'No'}</p>
                 </div>
                 <div>
@@ -167,7 +169,7 @@ const CashierPanel = () => {
                 className="flex-1 flex items-center justify-center px-4 py-2 bg-success-600 text-white rounded-md hover:bg-success-700 transition-colors"
               >
                 <SafeIcon icon={FiCheckCircle} className="w-4 h-4 mr-2" />
-                Approve
+                {t('approve')}
               </button>
               <button
                 onClick={() => {
@@ -177,7 +179,7 @@ const CashierPanel = () => {
                 className="flex-1 flex items-center justify-center px-4 py-2 bg-danger-600 text-white rounded-md hover:bg-danger-700 transition-colors"
               >
                 <SafeIcon icon={FiXCircle} className="w-4 h-4 mr-2" />
-                Disapprove
+                {t('disapprove')}
               </button>
             </div>
           </div>
@@ -201,7 +203,7 @@ const CashierPanel = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-3xl font-bold text-gray-900">Cashier Panel</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t('cashierPanel')}</h1>
         <p className="mt-2 text-gray-600">Review and approve pending transactions</p>
       </motion.div>
 
@@ -213,10 +215,9 @@ const CashierPanel = () => {
       >
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">
-            Pending Approvals ({pendingTransactions.length})
+            {t('pendingApprovals')} ({pendingTransactions.length})
           </h2>
         </div>
-
         <div className="p-6">
           {pendingTransactions.length === 0 ? (
             <div className="text-center py-8">
@@ -236,11 +237,11 @@ const CashierPanel = () => {
                         <div className={`p-2 rounded-full ${
                           transaction.type === 'income' ? 'bg-success-50' : 'bg-danger-50'
                         }`}>
-                          <SafeIcon 
-                            icon={FiDollarSign} 
+                          <SafeIcon
+                            icon={FiDollarSign}
                             className={`w-4 h-4 ${
                               transaction.type === 'income' ? 'text-success-600' : 'text-danger-600'
-                            }`} 
+                            }`}
                           />
                         </div>
                         <div>
@@ -250,7 +251,6 @@ const CashierPanel = () => {
                           </p>
                         </div>
                       </div>
-
                       <div className="flex items-center space-x-6 text-sm text-gray-600">
                         <div className="flex items-center">
                           <SafeIcon icon={FiDollarSign} className="w-4 h-4 mr-1" />
@@ -270,7 +270,6 @@ const CashierPanel = () => {
                         </div>
                       </div>
                     </div>
-
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => setSelectedTransaction(transaction)}
@@ -283,13 +282,13 @@ const CashierPanel = () => {
                         onClick={() => handleApprove(transaction.id)}
                         className="px-3 py-1 text-sm bg-success-600 text-white rounded-md hover:bg-success-700 transition-colors"
                       >
-                        Approve
+                        {t('approve')}
                       </button>
                       <button
                         onClick={() => handleDisapprove(transaction.id)}
                         className="px-3 py-1 text-sm bg-danger-600 text-white rounded-md hover:bg-danger-700 transition-colors"
                       >
-                        Disapprove
+                        {t('disapprove')}
                       </button>
                     </div>
                   </div>

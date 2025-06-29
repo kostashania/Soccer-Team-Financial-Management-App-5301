@@ -4,25 +4,27 @@ import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import clsx from 'clsx';
 
 const { FiHome, FiDollarSign, FiPlus, FiCheckSquare, FiFileText, FiCalendar, FiFilter, FiSettings, FiExternalLink, FiX } = FiIcons;
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const location = useLocation();
 
   const getMenuItems = () => {
     const baseItems = [
-      { path: '/dashboard', label: 'Dashboard', icon: FiHome, roles: ['admin', 'board', 'cashier'] },
-      { path: '/transactions', label: 'Transactions', icon: FiDollarSign, roles: ['admin', 'board'] },
-      { path: '/create-transaction', label: 'Create Transaction', icon: FiPlus, roles: ['admin', 'board'] },
-      { path: '/cashier-panel', label: 'Cashier Panel', icon: FiCheckSquare, roles: ['cashier', 'admin'] },
-      { path: '/reports', label: 'Reports', icon: FiFileText, roles: ['admin', 'board', 'cashier'] },
-      { path: '/monthly-report', label: 'Monthly Report', icon: FiCalendar, roles: ['admin', 'board', 'cashier'] },
-      { path: '/super-filter', label: 'Super Filter', icon: FiFilter, roles: ['admin', 'board', 'cashier'] },
-      { path: '/platform', label: 'Platform', icon: FiExternalLink, roles: ['admin', 'board', 'cashier'] },
-      { path: '/admin-panel', label: 'Admin Panel', icon: FiSettings, roles: ['admin'] }
+      { path: '/dashboard', label: t('dashboard'), icon: FiHome, roles: ['admin', 'board', 'cashier'] },
+      { path: '/transactions', label: t('transactions'), icon: FiDollarSign, roles: ['admin', 'board'] },
+      { path: '/create-transaction', label: t('createTransaction'), icon: FiPlus, roles: ['admin', 'board'] },
+      { path: '/cashier-panel', label: t('cashierPanel'), icon: FiCheckSquare, roles: ['cashier', 'admin'] },
+      { path: '/reports', label: t('reports'), icon: FiFileText, roles: ['admin', 'board', 'cashier'] },
+      { path: '/monthly-report', label: t('monthlyReport'), icon: FiCalendar, roles: ['admin', 'board', 'cashier'] },
+      { path: '/super-filter', label: t('superFilter'), icon: FiFilter, roles: ['admin', 'board', 'cashier'] },
+      { path: '/platform', label: t('platform'), icon: FiExternalLink, roles: ['admin', 'board', 'cashier'] },
+      { path: '/admin-panel', label: t('adminPanel'), icon: FiSettings, roles: ['admin'] }
     ];
 
     return baseItems.filter(item => item.roles.includes(user?.role));
@@ -60,7 +62,6 @@ const Sidebar = ({ isOpen, onClose }) => {
             </div>
             <span className="ml-3 text-lg font-semibold text-gray-900">Finance</span>
           </div>
-          
           <button
             onClick={onClose}
             className="lg:hidden p-1 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
@@ -85,12 +86,14 @@ const Sidebar = ({ isOpen, onClose }) => {
                   )
                 }
               >
-                <SafeIcon 
-                  icon={item.icon} 
+                <SafeIcon
+                  icon={item.icon}
                   className={clsx(
                     'mr-3 flex-shrink-0 h-5 w-5',
-                    location.pathname === item.path ? 'text-primary-500' : 'text-gray-400 group-hover:text-gray-500'
-                  )} 
+                    location.pathname === item.path
+                      ? 'text-primary-500'
+                      : 'text-gray-400 group-hover:text-gray-500'
+                  )}
                 />
                 {item.label}
               </NavLink>

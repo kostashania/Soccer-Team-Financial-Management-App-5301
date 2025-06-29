@@ -5,6 +5,7 @@ import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../components/common/SafeIcon';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import toast from 'react-hot-toast';
 
 const { FiSave, FiUpload, FiX } = FiIcons;
@@ -12,10 +13,17 @@ const { FiSave, FiUpload, FiX } = FiIcons;
 const CreateTransaction = () => {
   const { user } = useAuth();
   const { categories, items, addTransaction } = useData();
+  const { t } = useLanguage();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors }
+  } = useForm({
     defaultValues: {
       submittedBy: user?.name,
       type: 'expense',
@@ -31,7 +39,7 @@ const CreateTransaction = () => {
 
   // Filter categories based on selected type
   const filteredCategories = categories.filter(cat => cat.type === watchedType);
-  
+
   // Filter items based on selected category - compare UUID strings directly
   const filteredItems = items.filter(item => {
     console.log('Filtering items. Item categoryId:', item.categoryId, 'Selected categoryId:', watchedCategory, 'Match:', item.categoryId === watchedCategory);
@@ -54,7 +62,7 @@ const CreateTransaction = () => {
 
   const onSubmit = async (data) => {
     if (isSubmitting) return;
-    
+
     setIsSubmitting(true);
     try {
       const transactionData = {
@@ -94,7 +102,7 @@ const CreateTransaction = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Create Transaction</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">{t('createTransaction')}</h1>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -114,14 +122,14 @@ const CreateTransaction = () => {
             {/* Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Type *
+                {t('type')} *
               </label>
               <select
                 {...register('type', { required: 'Type is required' })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
-                <option value="expense">Expense</option>
-                <option value="income">Income</option>
+                <option value="expense">{t('expense')}</option>
+                <option value="income">{t('income')}</option>
               </select>
               {errors.type && <p className="mt-1 text-sm text-red-600">{errors.type.message}</p>}
             </div>
@@ -129,13 +137,13 @@ const CreateTransaction = () => {
             {/* Category */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category *
+                {t('category')} *
               </label>
               <select
                 {...register('categoryId', { required: 'Category is required' })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
-                <option value="">Select a category</option>
+                <option value="">{t('selectOption')}</option>
                 {filteredCategories.map(category => (
                   <option key={category.id} value={category.id}>
                     {category.name}
@@ -148,14 +156,14 @@ const CreateTransaction = () => {
             {/* Item */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Item *
+                {t('item')} *
               </label>
               <select
                 {...register('itemId', { required: 'Item is required' })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 disabled={!watchedCategory}
               >
-                <option value="">Select an item</option>
+                <option value="">{t('selectOption')}</option>
                 {filteredItems.map(item => (
                   <option key={item.id} value={item.id}>
                     {item.name}
@@ -171,13 +179,13 @@ const CreateTransaction = () => {
             {/* Amount */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Amount *
+                {t('amount')} *
               </label>
               <input
                 type="number"
                 step="0.01"
-                {...register('amount', { 
-                  required: 'Amount is required', 
+                {...register('amount', {
+                  required: 'Amount is required',
                   min: { value: 0.01, message: 'Amount must be greater than 0' }
                 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -189,7 +197,7 @@ const CreateTransaction = () => {
             {/* Description */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description *
+                {t('description')} *
               </label>
               <textarea
                 {...register('description', { required: 'Description is required' })}
@@ -203,14 +211,14 @@ const CreateTransaction = () => {
             {/* Status */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Status *
+                {t('status')} *
               </label>
               <select
                 {...register('status', { required: 'Status is required' })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
-                <option value="paid">Paid</option>
-                <option value="pending">Pending</option>
+                <option value="paid">{t('paid')}</option>
+                <option value="pending">{t('pending')}</option>
               </select>
             </div>
 
@@ -222,8 +230,8 @@ const CreateTransaction = () => {
                 </label>
                 <input
                   type="date"
-                  {...register('expectedDate', { 
-                    required: watchedStatus === 'pending' ? 'Expected date is required for pending transactions' : false 
+                  {...register('expectedDate', {
+                    required: watchedStatus === 'pending' ? 'Expected date is required for pending transactions' : false
                   })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 />
@@ -240,7 +248,7 @@ const CreateTransaction = () => {
                   value="true"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
                 />
-                <span className="ml-2 text-sm text-gray-700">Official</span>
+                <span className="ml-2 text-sm text-gray-700">{t('official')}</span>
               </label>
               <label className="flex items-center">
                 <input
@@ -249,7 +257,7 @@ const CreateTransaction = () => {
                   value="false"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
                 />
-                <span className="ml-2 text-sm text-gray-700">Unofficial</span>
+                <span className="ml-2 text-sm text-gray-700">{t('unofficial')}</span>
               </label>
             </div>
 
@@ -295,7 +303,6 @@ const CreateTransaction = () => {
                   <SafeIcon icon={FiUpload} className="w-8 h-8 text-gray-400" />
                   <span className="text-sm text-gray-600">Click to upload files</span>
                 </label>
-                
                 {selectedFiles.length > 0 && (
                   <div className="mt-4 space-y-2">
                     {selectedFiles.map((file, index) => (
@@ -323,7 +330,7 @@ const CreateTransaction = () => {
                 className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <SafeIcon icon={FiSave} className="w-4 h-4 mr-2" />
-                {isSubmitting ? 'Creating...' : 'Create Transaction'}
+                {isSubmitting ? 'Creating...' : t('createTransaction')}
               </button>
             </div>
           </form>
