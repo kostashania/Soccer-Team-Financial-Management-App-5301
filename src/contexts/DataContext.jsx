@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import supabase from '../lib/supabase';
+import toast from 'react-hot-toast';
 
 const DataContext = createContext();
 
@@ -12,102 +14,272 @@ export const useData = () => {
 
 export const DataProvider = ({ children }) => {
   const [transactions, setTransactions] = useState([]);
-  const [categories, setCategories] = useState([
-    { id: 1, name: 'Equipment', type: 'expense' },
-    { id: 2, name: 'Travel', type: 'expense' },
-    { id: 3, name: 'Facilities', type: 'expense' },
-    { id: 4, name: 'Sponsorship', type: 'income' },
-    { id: 5, name: 'Ticket Sales', type: 'income' },
-    { id: 6, name: 'Merchandise', type: 'income' }
-  ]);
-  const [items, setItems] = useState([
-    { id: 1, categoryId: 1, name: 'Footballs' },
-    { id: 2, categoryId: 1, name: 'Training Cones' },
-    { id: 3, categoryId: 2, name: 'Bus Rental' },
-    { id: 4, categoryId: 2, name: 'Hotel' },
-    { id: 5, categoryId: 3, name: 'Field Rental' },
-    { id: 6, categoryId: 4, name: 'Main Sponsor' },
-    { id: 7, categoryId: 5, name: 'Match Tickets' },
-    { id: 8, categoryId: 6, name: 'Jersey Sales' }
-  ]);
-  const [platformButtons, setPlatformButtons] = useState([
-    { id: 1, text: 'Training Attendance', url: 'https://example.com/attendance' },
-    { id: 2, text: 'Match Schedule', url: 'https://example.com/schedule' }
-  ]);
-  const [users, setUsers] = useState([
-    { id: 1, name: 'Admin User', email: 'admin@team.com', role: 'admin' },
-    { id: 2, name: 'Board Member', email: 'board@team.com', role: 'board' },
-    { id: 3, name: 'Cashier', email: 'cashier@team.com', role: 'cashier' }
-  ]);
+  const [categories, setCategories] = useState([]);
+  const [items, setItems] = useState([]);
+  const [platformButtons, setPlatformButtons] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch data from Supabase
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories_stf2024')
+        .select('*')
+        .order('name');
+
+      if (categoriesError) throw categoriesError;
+
+      // Fetch items  
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('items_stf2024')
+        .select('*')
+        .order('name');
+
+      if (itemsError) throw itemsError;
+
+      // Fetch transactions
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('transactions_stf2024')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (transactionsError) throw transactionsError;
+
+      // Fetch platform buttons
+      const { data: buttonsData, error: buttonsError } = await supabase
+        .from('platform_buttons_stf2024')
+        .select('*')
+        .order('text');
+
+      if (buttonsError) throw buttonsError;
+
+      // Fetch users
+      const { data: usersData, error: usersError } = await supabase
+        .from('users_stf2024')
+        .select('*')
+        .order('name');
+
+      if (usersError) throw usersError;
+
+      // Transform data to match frontend expectations
+      setCategories(categoriesData.map(cat => ({ ...cat, id: cat.id })));
+      setItems(itemsData.map(item => ({ ...item, id: item.id, categoryId: item.category_id })));
+      setTransactions(transactionsData.map(trans => ({
+        ...trans,
+        id: trans.id,
+        categoryId: trans.category_id,
+        itemId: trans.item_id,
+        submittedBy: trans.submitted_by,
+        approvalStatus: trans.approval_status,
+        approvedBy: trans.approved_by,
+        approvedAt: trans.approved_at,
+        disapprovedBy: trans.disapproved_by,
+        disapprovedAt: trans.disapproved_at,
+        expectedDate: trans.expected_date,
+        createdAt: trans.created_at
+      })));
+      setPlatformButtons(buttonsData.map(btn => ({ ...btn, id: btn.id })));
+      setUsers(usersData.map(user => ({ ...user, id: user.id })));
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('Failed to load data from database');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Load data from localStorage
-    const storedTransactions = localStorage.getItem('soccerTeamTransactions');
-    const storedCategories = localStorage.getItem('soccerTeamCategories');
-    const storedItems = localStorage.getItem('soccerTeamItems');
-    const storedButtons = localStorage.getItem('soccerTeamButtons');
-
-    if (storedTransactions) setTransactions(JSON.parse(storedTransactions));
-    if (storedCategories) setCategories(JSON.parse(storedCategories));
-    if (storedItems) setItems(JSON.parse(storedItems));
-    if (storedButtons) setPlatformButtons(JSON.parse(storedButtons));
+    fetchData();
   }, []);
 
-  const saveToStorage = (key, data) => {
-    localStorage.setItem(key, JSON.stringify(data));
+  const addTransaction = async (transaction) => {
+    try {
+      const { data, error } = await supabase
+        .from('transactions_stf2024')
+        .insert([{
+          type: transaction.type,
+          category_id: transaction.categoryId,
+          item_id: transaction.itemId,
+          amount: transaction.amount,
+          description: transaction.description,
+          status: transaction.status,
+          expected_date: transaction.expectedDate || null,
+          official: transaction.official,
+          count: transaction.count,
+          submitted_by: transaction.submittedBy,
+          approval_status: 'pending',
+          attachments: transaction.attachments || []
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Transform and add to local state
+      const newTransaction = {
+        ...data,
+        id: data.id,
+        categoryId: data.category_id,
+        itemId: data.item_id,
+        submittedBy: data.submitted_by,
+        approvalStatus: data.approval_status,
+        approvedBy: data.approved_by,
+        approvedAt: data.approved_at,
+        disapprovedBy: data.disapproved_by,
+        disapprovedAt: data.disapproved_at,
+        expectedDate: data.expected_date,
+        createdAt: data.created_at
+      };
+
+      setTransactions(prev => [newTransaction, ...prev]);
+      toast.success('Transaction created successfully!');
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+      toast.error('Failed to create transaction');
+    }
   };
 
-  const addTransaction = (transaction) => {
-    const newTransaction = {
-      ...transaction,
-      id: Date.now(),
-      createdAt: new Date().toISOString(),
-      approvalStatus: 'pending'
-    };
-    const updatedTransactions = [...transactions, newTransaction];
-    setTransactions(updatedTransactions);
-    saveToStorage('soccerTeamTransactions', updatedTransactions);
+  const updateTransaction = async (id, updates) => {
+    try {
+      const dbUpdates = {};
+      
+      // Map frontend field names to database field names
+      if (updates.approvalStatus) dbUpdates.approval_status = updates.approvalStatus;
+      if (updates.approvedBy) dbUpdates.approved_by = updates.approvedBy;
+      if (updates.approvedAt) dbUpdates.approved_at = updates.approvedAt;
+      if (updates.disapprovedBy) dbUpdates.disapproved_by = updates.disapprovedBy;
+      if (updates.disapprovedAt) dbUpdates.disapproved_at = updates.disapprovedAt;
+
+      const { data, error } = await supabase
+        .from('transactions_stf2024')
+        .update(dbUpdates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update local state
+      setTransactions(prev => prev.map(t => 
+        t.id === id ? {
+          ...t,
+          ...updates,
+          categoryId: data.category_id,
+          itemId: data.item_id,
+          submittedBy: data.submitted_by,
+          approvalStatus: data.approval_status,
+          approvedBy: data.approved_by,
+          approvedAt: data.approved_at,
+          disapprovedBy: data.disapproved_by,
+          disapprovedAt: data.disapproved_at,
+          expectedDate: data.expected_date,
+          createdAt: data.created_at
+        } : t
+      ));
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      toast.error('Failed to update transaction');
+    }
   };
 
-  const updateTransaction = (id, updates) => {
-    const updatedTransactions = transactions.map(t => 
-      t.id === id ? { ...t, ...updates } : t
-    );
-    setTransactions(updatedTransactions);
-    saveToStorage('soccerTeamTransactions', updatedTransactions);
+  const deleteTransaction = async (id) => {
+    try {
+      const { error } = await supabase
+        .from('transactions_stf2024')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setTransactions(prev => prev.filter(t => t.id !== id));
+      toast.success('Transaction deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      toast.error('Failed to delete transaction');
+    }
   };
 
-  const deleteTransaction = (id) => {
-    const updatedTransactions = transactions.filter(t => t.id !== id);
-    setTransactions(updatedTransactions);
-    saveToStorage('soccerTeamTransactions', updatedTransactions);
+  const addCategory = async (category) => {
+    try {
+      const { data, error } = await supabase
+        .from('categories_stf2024')
+        .insert([category])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setCategories(prev => [...prev, { ...data, id: data.id }]);
+      toast.success('Category added successfully!');
+    } catch (error) {
+      console.error('Error adding category:', error);
+      toast.error('Failed to add category');
+    }
   };
 
-  const addCategory = (category) => {
-    const newCategory = { ...category, id: Date.now() };
-    const updatedCategories = [...categories, newCategory];
-    setCategories(updatedCategories);
-    saveToStorage('soccerTeamCategories', updatedCategories);
+  const addItem = async (item) => {
+    try {
+      const { data, error } = await supabase
+        .from('items_stf2024')
+        .insert([{
+          category_id: item.categoryId,
+          name: item.name
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setItems(prev => [...prev, { 
+        ...data, 
+        id: data.id, 
+        categoryId: data.category_id 
+      }]);
+      toast.success('Item added successfully!');
+    } catch (error) {
+      console.error('Error adding item:', error);
+      toast.error('Failed to add item');
+    }
   };
 
-  const addItem = (item) => {
-    const newItem = { ...item, id: Date.now() };
-    const updatedItems = [...items, newItem];
-    setItems(updatedItems);
-    saveToStorage('soccerTeamItems', updatedItems);
+  const addPlatformButton = async (button) => {
+    try {
+      const { data, error } = await supabase
+        .from('platform_buttons_stf2024')
+        .insert([button])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setPlatformButtons(prev => [...prev, { ...data, id: data.id }]);
+      toast.success('Platform button added successfully!');
+    } catch (error) {
+      console.error('Error adding platform button:', error);
+      toast.error('Failed to add platform button');
+    }
   };
 
-  const addPlatformButton = (button) => {
-    const newButton = { ...button, id: Date.now() };
-    const updatedButtons = [...platformButtons, newButton];
-    setPlatformButtons(updatedButtons);
-    saveToStorage('soccerTeamButtons', updatedButtons);
-  };
+  const deletePlatformButton = async (id) => {
+    try {
+      const { error } = await supabase
+        .from('platform_buttons_stf2024')
+        .delete()
+        .eq('id', id);
 
-  const deletePlatformButton = (id) => {
-    const updatedButtons = platformButtons.filter(b => b.id !== id);
-    setPlatformButtons(updatedButtons);
-    saveToStorage('soccerTeamButtons', updatedButtons);
+      if (error) throw error;
+
+      setPlatformButtons(prev => prev.filter(b => b.id !== id));
+      toast.success('Platform button deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting platform button:', error);
+      toast.error('Failed to delete platform button');
+    }
   };
 
   const value = {
@@ -116,13 +288,15 @@ export const DataProvider = ({ children }) => {
     items,
     platformButtons,
     users,
+    loading,
     addTransaction,
     updateTransaction,
     deleteTransaction,
     addCategory,
     addItem,
     addPlatformButton,
-    deletePlatformButton
+    deletePlatformButton,
+    fetchData
   };
 
   return (

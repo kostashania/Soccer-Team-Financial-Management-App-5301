@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import supabase from '../lib/supabase';
+import toast from 'react-hot-toast';
 
 const AuthContext = createContext();
 
@@ -24,27 +26,44 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    // Mock authentication - replace with real auth
-    const mockUsers = [
-      { id: 1, name: 'Admin User', email: 'admin@team.com', role: 'admin' },
-      { id: 2, name: 'Board Member', email: 'board@team.com', role: 'board' },
-      { id: 3, name: 'Cashier', email: 'cashier@team.com', role: 'cashier' }
-    ];
+    try {
+      // Check if user exists in our custom users table
+      const { data: userData, error: userError } = await supabase
+        .from('users_stf2024')
+        .select('*')
+        .eq('email', email)
+        .single();
 
-    const foundUser = mockUsers.find(u => u.email === email && password === 'password');
-    
-    if (foundUser) {
-      setUser(foundUser);
-      localStorage.setItem('soccerTeamUser', JSON.stringify(foundUser));
-      return { success: true };
+      if (userError) {
+        return { success: false, error: 'Invalid credentials' };
+      }
+
+      // For demo purposes, we're using a simple password check
+      // In production, you'd use Supabase Auth with proper password hashing
+      if (password === 'password') {
+        const userObj = {
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+          role: userData.role
+        };
+        
+        setUser(userObj);
+        localStorage.setItem('soccerTeamUser', JSON.stringify(userObj));
+        return { success: true };
+      } else {
+        return { success: false, error: 'Invalid credentials' };
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, error: 'Login failed' };
     }
-    
-    return { success: false, error: 'Invalid credentials' };
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('soccerTeamUser');
+    toast.success('Logged out successfully');
   };
 
   const value = {

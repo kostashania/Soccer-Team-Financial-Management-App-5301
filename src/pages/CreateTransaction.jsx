@@ -13,13 +13,15 @@ const CreateTransaction = () => {
   const { user } = useAuth();
   const { categories, items, addTransaction } = useData();
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm({
     defaultValues: {
       submittedBy: user?.name,
       type: 'expense',
       status: 'paid',
-      official: true,
-      count: true
+      official: 'true',
+      count: 'true'
     }
   });
 
@@ -27,8 +29,11 @@ const CreateTransaction = () => {
   const watchedCategory = watch('categoryId');
   const watchedStatus = watch('status');
 
+  // Filter categories based on selected type
   const filteredCategories = categories.filter(cat => cat.type === watchedType);
-  const filteredItems = items.filter(item => item.categoryId === parseInt(watchedCategory));
+  
+  // Filter items based on selected category
+  const filteredItems = items.filter(item => item.categoryId === watchedCategory);
 
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
@@ -39,13 +44,22 @@ const CreateTransaction = () => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
     try {
       const transactionData = {
-        ...data,
+        type: data.type,
+        categoryId: data.categoryId,
+        itemId: data.itemId,
         amount: parseFloat(data.amount),
-        categoryId: parseInt(data.categoryId),
-        itemId: parseInt(data.itemId),
+        description: data.description,
+        status: data.status,
+        expectedDate: data.expectedDate || null,
+        official: data.official === 'true',
+        count: data.count === 'true',
+        submittedBy: data.submittedBy,
         attachments: selectedFiles.map(file => ({
           name: file.name,
           size: file.size,
@@ -53,12 +67,14 @@ const CreateTransaction = () => {
         }))
       };
 
-      addTransaction(transactionData);
-      toast.success('Transaction created successfully!');
+      await addTransaction(transactionData);
       reset();
       setSelectedFiles([]);
     } catch (error) {
+      console.error('Error creating transaction:', error);
       toast.error('Failed to create transaction');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -209,7 +225,7 @@ const CreateTransaction = () => {
                 <input
                   type="radio"
                   {...register('official')}
-                  value={true}
+                  value="true"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
                 />
                 <span className="ml-2 text-sm text-gray-700">Official</span>
@@ -218,7 +234,7 @@ const CreateTransaction = () => {
                 <input
                   type="radio"
                   {...register('official')}
-                  value={false}
+                  value="false"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
                 />
                 <span className="ml-2 text-sm text-gray-700">Unofficial</span>
@@ -231,7 +247,7 @@ const CreateTransaction = () => {
                 <input
                   type="radio"
                   {...register('count')}
-                  value={true}
+                  value="true"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
                 />
                 <span className="ml-2 text-sm text-gray-700">Count in cash calculation</span>
@@ -240,7 +256,7 @@ const CreateTransaction = () => {
                 <input
                   type="radio"
                   {...register('count')}
-                  value={false}
+                  value="false"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
                 />
                 <span className="ml-2 text-sm text-gray-700">Don't count</span>
@@ -291,10 +307,11 @@ const CreateTransaction = () => {
             <div className="pt-4">
               <button
                 type="submit"
-                className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                disabled={isSubmitting}
+                className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <SafeIcon icon={FiSave} className="w-4 h-4 mr-2" />
-                Create Transaction
+                {isSubmitting ? 'Creating...' : 'Create Transaction'}
               </button>
             </div>
           </form>
