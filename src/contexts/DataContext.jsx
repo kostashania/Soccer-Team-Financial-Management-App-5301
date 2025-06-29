@@ -50,7 +50,7 @@ export const DataProvider = ({ children }) => {
         throw categoriesError;
       }
 
-      // Fetch items  
+      // Fetch items
       const { data: itemsData, error: itemsError } = await supabase
         .from('items_stf2024')
         .select('*')
@@ -94,9 +94,18 @@ export const DataProvider = ({ children }) => {
         throw usersError;
       }
 
-      // Transform data to match frontend expectations
-      setCategories(categoriesData?.map(cat => ({ ...cat, id: cat.id })) || []);
-      setItems(itemsData?.map(item => ({ ...item, id: item.id, categoryId: item.category_id })) || []);
+      // Transform data to match frontend expectations - FIX THE MAPPING HERE
+      setCategories(categoriesData?.map(cat => ({
+        ...cat,
+        id: cat.id
+      })) || []);
+
+      setItems(itemsData?.map(item => ({
+        ...item,
+        id: item.id,
+        categoryId: item.category_id // THIS IS THE KEY FIX
+      })) || []);
+
       setTransactions(transactionsData?.map(trans => ({
         ...trans,
         id: trans.id,
@@ -111,12 +120,19 @@ export const DataProvider = ({ children }) => {
         expectedDate: trans.expected_date,
         createdAt: trans.created_at
       })) || []);
-      setPlatformButtons(buttonsData?.map(btn => ({ ...btn, id: btn.id })) || []);
-      setUsers(usersData?.map(user => ({ ...user, id: user.id })) || []);
+
+      setPlatformButtons(buttonsData?.map(btn => ({
+        ...btn,
+        id: btn.id
+      })) || []);
+
+      setUsers(usersData?.map(user => ({
+        ...user,
+        id: user.id
+      })) || []);
 
       toast.success('Data loaded successfully!');
       setConnectionStatus('connected');
-
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error(`Failed to load data: ${error.message}`);
@@ -180,7 +196,6 @@ export const DataProvider = ({ children }) => {
   const updateTransaction = async (id, updates) => {
     try {
       const dbUpdates = {};
-      
       // Map frontend field names to database field names
       if (updates.approvalStatus) dbUpdates.approval_status = updates.approvalStatus;
       if (updates.approvedBy) dbUpdates.approved_by = updates.approvedBy;
@@ -198,22 +213,26 @@ export const DataProvider = ({ children }) => {
       if (error) throw error;
 
       // Update local state
-      setTransactions(prev => prev.map(t => 
-        t.id === id ? {
-          ...t,
-          ...updates,
-          categoryId: data.category_id,
-          itemId: data.item_id,
-          submittedBy: data.submitted_by,
-          approvalStatus: data.approval_status,
-          approvedBy: data.approved_by,
-          approvedAt: data.approved_at,
-          disapprovedBy: data.disapproved_by,
-          disapprovedAt: data.disapproved_at,
-          expectedDate: data.expected_date,
-          createdAt: data.created_at
-        } : t
-      ));
+      setTransactions(prev => 
+        prev.map(t => 
+          t.id === id 
+            ? {
+                ...t,
+                ...updates,
+                categoryId: data.category_id,
+                itemId: data.item_id,
+                submittedBy: data.submitted_by,
+                approvalStatus: data.approval_status,
+                approvedBy: data.approved_by,
+                approvedAt: data.approved_at,
+                disapprovedBy: data.disapproved_by,
+                disapprovedAt: data.disapproved_at,
+                expectedDate: data.expected_date,
+                createdAt: data.created_at
+              }
+            : t
+        )
+      );
     } catch (error) {
       console.error('Error updating transaction:', error);
       toast.error(`Failed to update transaction: ${error.message}`);
@@ -260,7 +279,7 @@ export const DataProvider = ({ children }) => {
       const { data, error } = await supabase
         .from('items_stf2024')
         .insert([{
-          category_id: item.categoryId,
+          category_id: item.categoryId, // Use categoryId from frontend
           name: item.name
         }])
         .select()
@@ -268,10 +287,11 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      setItems(prev => [...prev, { 
-        ...data, 
-        id: data.id, 
-        categoryId: data.category_id 
+      // Add to local state with proper mapping
+      setItems(prev => [...prev, {
+        ...data,
+        id: data.id,
+        categoryId: data.category_id // Map back to frontend format
       }]);
       toast.success('Item added successfully!');
     } catch (error) {
