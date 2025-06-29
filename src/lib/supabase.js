@@ -7,12 +7,45 @@ if (SUPABASE_URL === 'https://<PROJECT-ID>.supabase.co' || SUPABASE_ANON_KEY ===
   throw new Error('Missing Supabase variables')
 }
 
-export default createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+// Create client with proper configuration
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true
-  },
-  db: {
-    schema: 'soccer_finance'
   }
 })
+
+// Test connection function
+export const testConnection = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('categories_stf2024')
+      .select('count(*)', { count: 'exact' })
+      .limit(1)
+    
+    if (error) throw error
+    
+    return { success: true, message: 'Connected successfully' }
+  } catch (error) {
+    console.error('Connection test failed:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+// Get database info
+export const getDatabaseInfo = () => {
+  return {
+    url: SUPABASE_URL,
+    project_id: SUPABASE_URL.split('//')[1].split('.')[0],
+    schema: 'public', // Supabase uses public schema by default
+    tables: [
+      'categories_stf2024',
+      'items_stf2024', 
+      'transactions_stf2024',
+      'platform_buttons_stf2024',
+      'users_stf2024'
+    ]
+  }
+}
+
+export default supabase

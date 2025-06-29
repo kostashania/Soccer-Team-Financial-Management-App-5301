@@ -1,22 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../components/common/SafeIcon';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
+import { getDatabaseInfo, testConnection } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
-const { FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink } = FiIcons;
+const { FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink, FiDatabase, FiWifi, FiWifiOff, FiRefreshCw, FiInfo } = FiIcons;
 
 const AdminPanel = () => {
   const { user } = useAuth();
-  const { categories, items, platformButtons, transactions, addCategory, addItem, addPlatformButton, deletePlatformButton, deleteTransaction } = useData();
-  const [activeTab, setActiveTab] = useState('categories');
+  const { 
+    categories, 
+    items, 
+    platformButtons, 
+    transactions,
+    users,
+    connectionStatus,
+    addCategory, 
+    addItem, 
+    addPlatformButton, 
+    deletePlatformButton, 
+    deleteTransaction,
+    fetchData,
+    checkConnection
+  } = useData();
+  
+  const [activeTab, setActiveTab] = useState('database');
+  const [dbInfo, setDbInfo] = useState(null);
+  const [testing, setTesting] = useState(false);
 
   const categoryForm = useForm();
   const itemForm = useForm();
   const buttonForm = useForm();
+
+  useEffect(() => {
+    setDbInfo(getDatabaseInfo());
+  }, []);
 
   if (user?.role !== 'admin') {
     return (
@@ -29,38 +51,51 @@ const AdminPanel = () => {
   const onAddCategory = (data) => {
     addCategory(data);
     categoryForm.reset();
-    toast.success('Category added successfully!');
   };
 
   const onAddItem = (data) => {
     addItem({ ...data, categoryId: parseInt(data.categoryId) });
     itemForm.reset();
-    toast.success('Item added successfully!');
   };
 
   const onAddButton = (data) => {
     addPlatformButton(data);
     buttonForm.reset();
-    toast.success('Platform button added successfully!');
   };
 
   const handleDeleteButton = (id) => {
     if (confirm('Are you sure you want to delete this button?')) {
       deletePlatformButton(id);
-      toast.success('Button deleted successfully!');
     }
   };
 
   const handleDeleteTransaction = (id) => {
     if (confirm('Are you sure you want to delete this transaction?')) {
       deleteTransaction(id);
-      toast.success('Transaction deleted successfully!');
     }
+  };
+
+  const handleTestConnection = async () => {
+    setTesting(true);
+    const result = await testConnection();
+    if (result.success) {
+      toast.success('Database connection successful!');
+    } else {
+      toast.error(`Connection failed: ${result.error}`);
+    }
+    setTesting(false);
+  };
+
+  const handleRefreshData = async () => {
+    toast.loading('Refreshing data...');
+    await fetchData();
+    toast.dismiss();
   };
 
   const disapprovedTransactions = transactions.filter(t => t.approvalStatus === 'disapproved');
 
   const tabs = [
+    { id: 'database', label: 'Database', icon: FiDatabase },
     { id: 'categories', label: 'Categories', icon: FiTag },
     { id: 'items', label: 'Items', icon: FiList },
     { id: 'buttons', label: 'Platform Buttons', icon: FiExternalLink },
@@ -98,6 +133,155 @@ const AdminPanel = () => {
           ))}
         </nav>
       </div>
+
+      {/* Database Tab */}
+      {activeTab === 'database' && (
+        <motion.div
+          className="space-y-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          {/* Connection Status */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Database Connection Status</h2>
+              <div className="flex items-center space-x-2">
+                <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
+                  connectionStatus === 'connected' 
+                    ? 'bg-green-100 text-green-800' 
+                    : connectionStatus === 'disconnected'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                  <SafeIcon 
+                    icon={connectionStatus === 'connected' ? FiWifi : FiWifiOff} 
+                    className="w-4 h-4" 
+                  />
+                  <span className="capitalize">{connectionStatus}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Database URL</label>
+                <p className="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded">
+                  {dbInfo?.url}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Project ID</label>
+                <p className="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded">
+                  {dbInfo?.project_id}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Schema</label>
+                <p className="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded">
+                  {dbInfo?.schema}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Tables Count</label>
+                <p className="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded">
+                  {dbInfo?.tables?.length || 0} tables
+                </p>
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={handleTestConnection}
+                disabled={testing}
+                className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50"
+              >
+                <SafeIcon icon={FiDatabase} className="w-4 h-4 mr-2" />
+                {testing ? 'Testing...' : 'Test Connection'}
+              </button>
+              <button
+                onClick={handleRefreshData}
+                className="flex items-center px-4 py-2 bg-success-600 text-white rounded-md hover:bg-success-700 transition-colors"
+              >
+                <SafeIcon icon={FiRefreshCw} className="w-4 h-4 mr-2" />
+                Refresh Data
+              </button>
+            </div>
+          </div>
+
+          {/* Tables Information */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Database Tables</h2>
+            <div className="space-y-3">
+              {dbInfo?.tables?.map((table) => (
+                <div key={table} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <SafeIcon icon={FiList} className="w-4 h-4 text-gray-600" />
+                    <span className="font-mono text-sm text-gray-900">{table}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      connectionStatus === 'connected' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {connectionStatus === 'connected' ? 'Active' : 'Unknown'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Data Summary */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Data Summary</h2>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <p className="text-2xl font-bold text-blue-600">{categories.length}</p>
+                <p className="text-sm text-gray-600">Categories</p>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <p className="text-2xl font-bold text-green-600">{items.length}</p>
+                <p className="text-sm text-gray-600">Items</p>
+              </div>
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
+                <p className="text-2xl font-bold text-purple-600">{transactions.length}</p>
+                <p className="text-sm text-gray-600">Transactions</p>
+              </div>
+              <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                <p className="text-2xl font-bold text-yellow-600">{platformButtons.length}</p>
+                <p className="text-sm text-gray-600">Platform Buttons</p>
+              </div>
+              <div className="text-center p-4 bg-red-50 rounded-lg">
+                <p className="text-2xl font-bold text-red-600">{users?.length || 0}</p>
+                <p className="text-sm text-gray-600">Users</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Connection Issues Help */}
+          {connectionStatus === 'disconnected' && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+              <div className="flex items-start">
+                <SafeIcon icon={FiInfo} className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+                <div>
+                  <h3 className="text-sm font-medium text-red-900">Connection Issues Detected</h3>
+                  <div className="text-sm text-red-700 mt-2">
+                    <p>If you're experiencing connection issues, please check:</p>
+                    <ul className="list-disc list-inside mt-2 space-y-1">
+                      <li>Your internet connection</li>
+                      <li>Supabase project status</li>
+                      <li>Database credentials are correct</li>
+                      <li>Tables exist in the database</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Categories Tab */}
       {activeTab === 'categories' && (
@@ -160,7 +344,9 @@ const AdminPanel = () => {
                   <div>
                     <span className="font-medium text-gray-900">{category.name}</span>
                     <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                      category.type === 'income' ? 'bg-success-100 text-success-800' : 'bg-danger-100 text-danger-800'
+                      category.type === 'income' 
+                        ? 'bg-success-100 text-success-800' 
+                        : 'bg-danger-100 text-danger-800'
                     }`}>
                       {category.type}
                     </span>
@@ -331,11 +517,28 @@ const AdminPanel = () => {
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-lg font-semibold text-gray-900 mb-4">User Management</h2>
-          <p className="text-gray-600 mb-4">User role management will be implemented in a future version.</p>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-700">
-              Currently using demo users. In production, this would integrate with your authentication system.
-            </p>
+          <div className="space-y-3">
+            {users && users.length > 0 ? users.map((userItem) => (
+              <div key={userItem.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <span className="font-medium text-gray-900">{userItem.name}</span>
+                  <span className="ml-2 text-sm text-gray-600">({userItem.email})</span>
+                  <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                    userItem.role === 'admin' 
+                      ? 'bg-red-100 text-red-800'
+                      : userItem.role === 'board'
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    {userItem.role}
+                  </span>
+                </div>
+              </div>
+            )) : (
+              <div className="text-center py-8">
+                <p className="text-gray-600">No users found</p>
+              </div>
+            )}
           </div>
         </motion.div>
       )}

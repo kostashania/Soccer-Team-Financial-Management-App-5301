@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import supabase from '../lib/supabase';
+import supabase, { testConnection } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 const DataContext = createContext();
@@ -19,11 +19,25 @@ export const DataProvider = ({ children }) => {
   const [platformButtons, setPlatformButtons] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState('unknown');
+
+  // Test database connection
+  const checkConnection = async () => {
+    const result = await testConnection();
+    setConnectionStatus(result.success ? 'connected' : 'disconnected');
+    return result;
+  };
 
   // Fetch data from Supabase
   const fetchData = async () => {
     try {
       setLoading(true);
+      
+      // First test connection
+      const connectionTest = await checkConnection();
+      if (!connectionTest.success) {
+        throw new Error(`Connection failed: ${connectionTest.error}`);
+      }
 
       // Fetch categories
       const { data: categoriesData, error: categoriesError } = await supabase
@@ -31,7 +45,10 @@ export const DataProvider = ({ children }) => {
         .select('*')
         .order('name');
 
-      if (categoriesError) throw categoriesError;
+      if (categoriesError) {
+        console.error('Categories error:', categoriesError);
+        throw categoriesError;
+      }
 
       // Fetch items  
       const { data: itemsData, error: itemsError } = await supabase
@@ -39,7 +56,10 @@ export const DataProvider = ({ children }) => {
         .select('*')
         .order('name');
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('Items error:', itemsError);
+        throw itemsError;
+      }
 
       // Fetch transactions
       const { data: transactionsData, error: transactionsError } = await supabase
@@ -47,7 +67,10 @@ export const DataProvider = ({ children }) => {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (transactionsError) throw transactionsError;
+      if (transactionsError) {
+        console.error('Transactions error:', transactionsError);
+        throw transactionsError;
+      }
 
       // Fetch platform buttons
       const { data: buttonsData, error: buttonsError } = await supabase
@@ -55,7 +78,10 @@ export const DataProvider = ({ children }) => {
         .select('*')
         .order('text');
 
-      if (buttonsError) throw buttonsError;
+      if (buttonsError) {
+        console.error('Buttons error:', buttonsError);
+        throw buttonsError;
+      }
 
       // Fetch users
       const { data: usersData, error: usersError } = await supabase
@@ -63,12 +89,15 @@ export const DataProvider = ({ children }) => {
         .select('*')
         .order('name');
 
-      if (usersError) throw usersError;
+      if (usersError) {
+        console.error('Users error:', usersError);
+        throw usersError;
+      }
 
       // Transform data to match frontend expectations
-      setCategories(categoriesData.map(cat => ({ ...cat, id: cat.id })));
-      setItems(itemsData.map(item => ({ ...item, id: item.id, categoryId: item.category_id })));
-      setTransactions(transactionsData.map(trans => ({
+      setCategories(categoriesData?.map(cat => ({ ...cat, id: cat.id })) || []);
+      setItems(itemsData?.map(item => ({ ...item, id: item.id, categoryId: item.category_id })) || []);
+      setTransactions(transactionsData?.map(trans => ({
         ...trans,
         id: trans.id,
         categoryId: trans.category_id,
@@ -81,13 +110,17 @@ export const DataProvider = ({ children }) => {
         disapprovedAt: trans.disapproved_at,
         expectedDate: trans.expected_date,
         createdAt: trans.created_at
-      })));
-      setPlatformButtons(buttonsData.map(btn => ({ ...btn, id: btn.id })));
-      setUsers(usersData.map(user => ({ ...user, id: user.id })));
+      })) || []);
+      setPlatformButtons(buttonsData?.map(btn => ({ ...btn, id: btn.id })) || []);
+      setUsers(usersData?.map(user => ({ ...user, id: user.id })) || []);
+
+      toast.success('Data loaded successfully!');
+      setConnectionStatus('connected');
 
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to load data from database');
+      toast.error(`Failed to load data: ${error.message}`);
+      setConnectionStatus('disconnected');
     } finally {
       setLoading(false);
     }
@@ -140,7 +173,7 @@ export const DataProvider = ({ children }) => {
       toast.success('Transaction created successfully!');
     } catch (error) {
       console.error('Error adding transaction:', error);
-      toast.error('Failed to create transaction');
+      toast.error(`Failed to create transaction: ${error.message}`);
     }
   };
 
@@ -183,7 +216,7 @@ export const DataProvider = ({ children }) => {
       ));
     } catch (error) {
       console.error('Error updating transaction:', error);
-      toast.error('Failed to update transaction');
+      toast.error(`Failed to update transaction: ${error.message}`);
     }
   };
 
@@ -200,7 +233,7 @@ export const DataProvider = ({ children }) => {
       toast.success('Transaction deleted successfully!');
     } catch (error) {
       console.error('Error deleting transaction:', error);
-      toast.error('Failed to delete transaction');
+      toast.error(`Failed to delete transaction: ${error.message}`);
     }
   };
 
@@ -218,7 +251,7 @@ export const DataProvider = ({ children }) => {
       toast.success('Category added successfully!');
     } catch (error) {
       console.error('Error adding category:', error);
-      toast.error('Failed to add category');
+      toast.error(`Failed to add category: ${error.message}`);
     }
   };
 
@@ -243,7 +276,7 @@ export const DataProvider = ({ children }) => {
       toast.success('Item added successfully!');
     } catch (error) {
       console.error('Error adding item:', error);
-      toast.error('Failed to add item');
+      toast.error(`Failed to add item: ${error.message}`);
     }
   };
 
@@ -261,7 +294,7 @@ export const DataProvider = ({ children }) => {
       toast.success('Platform button added successfully!');
     } catch (error) {
       console.error('Error adding platform button:', error);
-      toast.error('Failed to add platform button');
+      toast.error(`Failed to add platform button: ${error.message}`);
     }
   };
 
@@ -278,7 +311,7 @@ export const DataProvider = ({ children }) => {
       toast.success('Platform button deleted successfully!');
     } catch (error) {
       console.error('Error deleting platform button:', error);
-      toast.error('Failed to delete platform button');
+      toast.error(`Failed to delete platform button: ${error.message}`);
     }
   };
 
@@ -289,6 +322,7 @@ export const DataProvider = ({ children }) => {
     platformButtons,
     users,
     loading,
+    connectionStatus,
     addTransaction,
     updateTransaction,
     deleteTransaction,
@@ -296,7 +330,8 @@ export const DataProvider = ({ children }) => {
     addItem,
     addPlatformButton,
     deletePlatformButton,
-    fetchData
+    fetchData,
+    checkConnection
   };
 
   return (
