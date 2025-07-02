@@ -10,12 +10,12 @@ import toast from 'react-hot-toast';
 const { FiSave, FiUpload, FiTrash2, FiEye, FiRefreshCw, FiImage, FiType, FiSettings } = FiIcons;
 
 const BrandingSettings = () => {
-  const { branding, updateBranding, uploadLogo, removeLogo, loading } = useBranding();
+  const { branding, updateBranding, uploadLogo, removeLogo, loading, fetchBranding } = useBranding();
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
   const fileInputRef = useRef(null);
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({
+  const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm({
     defaultValues: {
       appTitle: branding.appTitle,
       appSubtitle: branding.appSubtitle
@@ -24,22 +24,35 @@ const BrandingSettings = () => {
 
   // Reset form when branding changes
   React.useEffect(() => {
+    console.log('Resetting form with branding:', branding);
     reset({
       appTitle: branding.appTitle,
       appSubtitle: branding.appSubtitle
     });
-  }, [branding, reset]);
+    setValue('appTitle', branding.appTitle);
+    setValue('appSubtitle', branding.appSubtitle);
+  }, [branding, reset, setValue]);
 
   const onSubmit = async (data) => {
-    await updateBranding({
+    console.log('Form submitted with data:', data);
+    const result = await updateBranding({
       appTitle: data.appTitle,
       appSubtitle: data.appSubtitle
     });
+    
+    if (result.success) {
+      // Refresh the data to ensure we have the latest
+      setTimeout(() => {
+        fetchBranding();
+      }, 500);
+    }
   };
 
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
     if (!file) return;
+
+    console.log('File selected:', file);
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -67,8 +80,14 @@ const BrandingSettings = () => {
   const handleLogoUpload = async (file) => {
     setUploading(true);
     try {
-      await uploadLogo(file);
-      setPreviewUrl(null);
+      const result = await uploadLogo(file);
+      if (result.success) {
+        setPreviewUrl(null);
+        // Refresh the branding data
+        setTimeout(() => {
+          fetchBranding();
+        }, 500);
+      }
     } catch (error) {
       console.error('Upload error:', error);
     } finally {
@@ -78,13 +97,25 @@ const BrandingSettings = () => {
 
   const handleRemoveLogo = async () => {
     if (window.confirm('Are you sure you want to remove the current logo?')) {
-      await removeLogo();
-      setPreviewUrl(null);
+      const result = await removeLogo();
+      if (result.success) {
+        setPreviewUrl(null);
+        // Refresh the branding data
+        setTimeout(() => {
+          fetchBranding();
+        }, 500);
+      }
     }
   };
 
   const triggerFileInput = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleRefreshBranding = async () => {
+    console.log('Refreshing branding data...');
+    await fetchBranding();
+    toast.success('Branding data refreshed!');
   };
 
   if (loading) {
@@ -102,6 +133,28 @@ const BrandingSettings = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
+      {/* Debug Info */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <SafeIcon icon={FiSettings} className="w-5 h-5 text-blue-600 mr-2" />
+            <div>
+              <h3 className="text-sm font-medium text-blue-900">Current Branding State</h3>
+              <p className="text-xs text-blue-700">
+                Title: "{branding.appTitle}" | Subtitle: "{branding.appSubtitle}" | Logo: {branding.logoUrl ? 'Set' : 'None'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleRefreshBranding}
+            className="flex items-center px-3 py-1 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded-md transition-colors"
+          >
+            <SafeIcon icon={FiRefreshCw} className="w-4 h-4 mr-1" />
+            Refresh
+          </button>
+        </div>
+      </div>
+
       {/* Preview Section */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center mb-6">
@@ -258,6 +311,7 @@ const BrandingSettings = () => {
                 ) : (
                   <>
                     <p><strong>File:</strong> {branding.logoFileName}</p>
+                    <p><strong>URL:</strong> {branding.logoUrl}</p>
                     <p><strong>Status:</strong> Active</p>
                   </>
                 )}

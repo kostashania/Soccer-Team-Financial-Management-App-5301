@@ -15,6 +15,11 @@ const AppLogo = ({
 }) => {
   const { branding } = useBranding();
 
+  // Debug log
+  React.useEffect(() => {
+    console.log('AppLogo rendering with branding:', branding);
+  }, [branding]);
+
   const sizeClasses = {
     xs: {
       container: 'w-6 h-6',
@@ -52,25 +57,37 @@ const AppLogo = ({
 
   const LogoComponent = () => (
     <div className={`flex items-center ${className} ${onClick ? 'cursor-pointer' : ''}`} onClick={onClick}>
-      <div className={`${currentSize.container} flex items-center justify-center`}>
+      <div className={`${currentSize.container} flex items-center justify-center relative`}>
         {branding.logoUrl ? (
-          <img
-            src={branding.logoUrl}
-            alt={branding.appTitle}
-            className={`${currentSize.logo} object-contain rounded-lg`}
-            onError={(e) => {
-              // Fallback to default icon if logo fails to load
-              e.target.style.display = 'none';
-              e.target.nextSibling.style.display = 'flex';
-            }}
-          />
-        ) : null}
-        <div 
-          className={`${currentSize.container} bg-primary-500 rounded-lg flex items-center justify-center ${branding.logoUrl ? 'hidden' : 'flex'}`}
-          style={{ display: branding.logoUrl ? 'none' : 'flex' }}
-        >
-          <SafeIcon icon={FiDollarSign} className={`${currentSize.icon} text-white`} />
-        </div>
+          <>
+            <img
+              src={branding.logoUrl}
+              alt={branding.appTitle}
+              className={`${currentSize.logo} object-contain rounded-lg`}
+              onLoad={() => console.log('Logo image loaded successfully')}
+              onError={(e) => {
+                console.log('Logo image failed to load, showing fallback');
+                // Fallback to default icon if logo fails to load
+                e.target.style.display = 'none';
+                const fallback = e.target.nextElementSibling;
+                if (fallback) {
+                  fallback.style.display = 'flex';
+                }
+              }}
+            />
+            {/* Fallback icon (hidden by default when logo is present) */}
+            <div 
+              className={`${currentSize.container} bg-primary-500 rounded-lg flex items-center justify-center absolute inset-0`}
+              style={{ display: 'none' }}
+            >
+              <SafeIcon icon={FiDollarSign} className={`${currentSize.icon} text-white`} />
+            </div>
+          </>
+        ) : (
+          <div className={`${currentSize.container} bg-primary-500 rounded-lg flex items-center justify-center`}>
+            <SafeIcon icon={FiDollarSign} className={`${currentSize.icon} text-white`} />
+          </div>
+        )}
       </div>
       {showText && (
         <div className="ml-3">

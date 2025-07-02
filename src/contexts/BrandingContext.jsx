@@ -25,26 +25,40 @@ export const BrandingProvider = ({ children }) => {
   const fetchBranding = async () => {
     try {
       setLoading(true);
+      console.log('Fetching branding settings...');
+
+      // Try to get existing settings
       const { data, error } = await supabase
         .from('app_settings_stf2024')
         .select('*')
-        .limit(1)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
+        console.error('Error fetching branding:', error);
         throw error;
       }
 
-      if (data) {
-        setBranding({
-          appTitle: data.app_title || 'Soccer Team Finance',
-          appSubtitle: data.app_subtitle || 'Financial Management System',
-          logoUrl: data.logo_url,
-          logoFileName: data.logo_file_name
-        });
+      console.log('Branding data fetched:', data);
+
+      if (data && data.length > 0) {
+        const settings = data[0];
+        const newBranding = {
+          appTitle: settings.app_title || 'Soccer Team Finance',
+          appSubtitle: settings.app_subtitle || 'Financial Management System',
+          logoUrl: settings.logo_url,
+          logoFileName: settings.logo_file_name
+        };
+        
+        console.log('Setting branding to:', newBranding);
+        setBranding(newBranding);
+      } else {
+        console.log('No branding data found, creating default...');
+        // Create default settings
+        await createDefaultSettings();
       }
     } catch (error) {
-      console.error('Error fetching branding:', error);
+      console.error('Error in fetchBranding:', error);
       // Use defaults on error
       setBranding({
         appTitle: 'Soccer Team Finance',
@@ -57,38 +71,101 @@ export const BrandingProvider = ({ children }) => {
     }
   };
 
-  // Update branding settings
-  const updateBranding = async (updates) => {
+  // Create default settings
+  const createDefaultSettings = async () => {
     try {
+      console.log('Creating default settings...');
       const { data, error } = await supabase
         .from('app_settings_stf2024')
-        .upsert({
-          app_title: updates.appTitle || branding.appTitle,
-          app_subtitle: updates.appSubtitle || branding.appSubtitle,
-          logo_url: updates.logoUrl !== undefined ? updates.logoUrl : branding.logoUrl,
-          logo_file_name: updates.logoFileName !== undefined ? updates.logoFileName : branding.logoFileName,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'id',
-          ignoreDuplicates: false
+        .insert({
+          app_title: 'Soccer Team Finance',
+          app_subtitle: 'Financial Management System',
+          logo_url: null,
+          logo_file_name: null
         })
         .select()
         .single();
 
       if (error) throw error;
 
+      console.log('Default settings created:', data);
       setBranding({
         appTitle: data.app_title,
         appSubtitle: data.app_subtitle,
         logoUrl: data.logo_url,
         logoFileName: data.logo_file_name
       });
+    } catch (error) {
+      console.error('Error creating default settings:', error);
+    }
+  };
+
+  // Update branding settings
+  const updateBranding = async (updates) => {
+    try {
+      console.log('Updating branding with:', updates);
+
+      // Get the current record ID
+      const { data: existingData } = await supabase
+        .from('app_settings_stf2024')
+        .select('id')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      let result;
+      
+      if (existingData && existingData.length > 0) {
+        // Update existing record
+        const { data, error } = await supabase
+          .from('app_settings_stf2024')
+          .update({
+            app_title: updates.appTitle !== undefined ? updates.appTitle : branding.appTitle,
+            app_subtitle: updates.appSubtitle !== undefined ? updates.appSubtitle : branding.appSubtitle,
+            logo_url: updates.logoUrl !== undefined ? updates.logoUrl : branding.logoUrl,
+            logo_file_name: updates.logoFileName !== undefined ? updates.logoFileName : branding.logoFileName,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingData[0].id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = data;
+      } else {
+        // Insert new record
+        const { data, error } = await supabase
+          .from('app_settings_stf2024')
+          .insert({
+            app_title: updates.appTitle || branding.appTitle,
+            app_subtitle: updates.appSubtitle || branding.appSubtitle,
+            logo_url: updates.logoUrl || branding.logoUrl,
+            logo_file_name: updates.logoFileName || branding.logoFileName
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = data;
+      }
+
+      console.log('Branding update result:', result);
+
+      // Update local state
+      const newBranding = {
+        appTitle: result.app_title,
+        appSubtitle: result.app_subtitle,
+        logoUrl: result.logo_url,
+        logoFileName: result.logo_file_name
+      };
+
+      console.log('Setting new branding state:', newBranding);
+      setBranding(newBranding);
 
       toast.success('Branding updated successfully!');
       return { success: true };
     } catch (error) {
       console.error('Error updating branding:', error);
-      toast.error('Failed to update branding');
+      toast.error(`Failed to update branding: ${error.message}`);
       return { success: false, error: error.message };
     }
   };
@@ -96,6 +173,8 @@ export const BrandingProvider = ({ children }) => {
   // Upload logo file
   const uploadLogo = async (file) => {
     try {
+      console.log('Starting logo upload...', file);
+
       // Validate file type
       if (!file.type.startsWith('image/')) {
         throw new Error('Please select an image file');
@@ -110,6 +189,8 @@ export const BrandingProvider = ({ children }) => {
       const fileExt = file.name.split('.').pop();
       const fileName = `logo_${Date.now()}.${fileExt}`;
 
+      console.log('Uploading to storage with filename:', fileName);
+
       // Upload to Supabase storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('app-logos')
@@ -118,7 +199,12 @@ export const BrandingProvider = ({ children }) => {
           upsert: true
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('Upload successful:', uploadData);
 
       // Get public URL
       const { data: urlData } = supabase.storage
@@ -126,6 +212,7 @@ export const BrandingProvider = ({ children }) => {
         .getPublicUrl(fileName);
 
       const logoUrl = urlData.publicUrl;
+      console.log('Generated public URL:', logoUrl);
 
       // Update branding with new logo
       const result = await updateBranding({
@@ -149,11 +236,18 @@ export const BrandingProvider = ({ children }) => {
   // Remove logo
   const removeLogo = async () => {
     try {
+      console.log('Removing logo...', branding.logoFileName);
+
       // Delete from storage if exists
       if (branding.logoFileName) {
-        await supabase.storage
+        const { error: deleteError } = await supabase.storage
           .from('app-logos')
           .remove([branding.logoFileName]);
+
+        if (deleteError) {
+          console.error('Error deleting from storage:', deleteError);
+          // Continue anyway - the file might not exist
+        }
       }
 
       // Update branding to remove logo
@@ -177,6 +271,11 @@ export const BrandingProvider = ({ children }) => {
   useEffect(() => {
     fetchBranding();
   }, []);
+
+  // Debug: Log branding state changes
+  useEffect(() => {
+    console.log('Branding state updated:', branding);
+  }, [branding]);
 
   const value = {
     branding,
