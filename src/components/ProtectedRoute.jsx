@@ -22,7 +22,7 @@ const ProtectedRoute = ({ children, requireRole = null }) => {
   }
 
   // Redirect superadmin to their dashboard
-  if (user.role === 'superadmin') {
+  if (user.role === 'superadmin' && !requireRole) {
     return <Navigate to="/super-admin" />;
   }
 

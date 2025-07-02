@@ -77,6 +77,20 @@ const CreateTransaction = () => {
       return;
     }
 
+    // Validate that the selected category and item exist
+    const categoryExists = categories.find(c => c.id === parseInt(data.categoryId));
+    const itemExists = items.find(i => i.id === parseInt(data.itemId));
+
+    if (!categoryExists) {
+      toast.error('Selected category is invalid. Please refresh the page and try again.');
+      return;
+    }
+
+    if (!itemExists) {
+      toast.error('Selected item is invalid. Please refresh the page and try again.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -167,6 +181,9 @@ const CreateTransaction = () => {
                 ))}
               </select>
               {errors.categoryId && <p className="mt-1 text-sm text-red-600">{errors.categoryId.message}</p>}
+              {filteredCategories.length === 0 && watchedType && (
+                <p className="mt-1 text-sm text-yellow-600">No categories found for {watchedType} type</p>
+              )}
             </div>
 
             {/* Item */}

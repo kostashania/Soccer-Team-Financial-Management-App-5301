@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import supabase, { testConnection } from '../lib/supabase';
+import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
 
 const DataContext = createContext();
@@ -13,6 +14,7 @@ export const useData = () => {
 };
 
 export const DataProvider = ({ children }) => {
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
@@ -36,6 +38,12 @@ export const DataProvider = ({ children }) => {
 
   // Fetch data from Supabase
   const fetchData = async () => {
+    // Don't fetch data for superadmin
+    if (user?.role === 'superadmin') {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       
@@ -179,13 +187,18 @@ export const DataProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    // Delay initial fetch to avoid issues during app startup
-    const timer = setTimeout(() => {
-      fetchData();
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
+    if (user) {
+      // Only fetch data if not superadmin
+      if (user.role !== 'superadmin') {
+        const timer = setTimeout(() => {
+          fetchData();
+        }, 100);
+        return () => clearTimeout(timer);
+      } else {
+        setLoading(false);
+      }
+    }
+  }, [user]);
 
   // User Management Functions
   const addUser = async (user) => {
@@ -268,6 +281,11 @@ export const DataProvider = ({ children }) => {
   // Transaction functions
   const addTransaction = async (transaction) => {
     try {
+      // Validate required fields
+      if (!transaction.categoryId || !transaction.itemId) {
+        throw new Error('Category and item must be selected');
+      }
+
       // Ensure categoryId and itemId are valid integers
       const categoryId = parseInt(transaction.categoryId);
       const itemId = parseInt(transaction.itemId);
@@ -276,26 +294,45 @@ export const DataProvider = ({ children }) => {
         throw new Error('Invalid category or item selected');
       }
 
+      // Validate that the category and item exist
+      const categoryExists = categories.find(c => c.id === categoryId);
+      const itemExists = items.find(i => i.id === itemId);
+
+      if (!categoryExists) {
+        throw new Error('Selected category does not exist');
+      }
+
+      if (!itemExists) {
+        throw new Error('Selected item does not exist');
+      }
+
+      const transactionData = {
+        type: transaction.type,
+        category_id: categoryId,
+        item_id: itemId,
+        amount: parseFloat(transaction.amount),
+        description: transaction.description,
+        status: transaction.status,
+        expected_date: transaction.expectedDate || null,
+        official: transaction.official,
+        count: transaction.count,
+        submitted_by: transaction.submittedBy,
+        approval_status: 'pending',
+        attachments: transaction.attachments || []
+      };
+
+      console.log('Submitting transaction with data:', transactionData);
+
       const { data, error } = await supabase
         .from('transactions_stf2024')
-        .insert([{
-          type: transaction.type,
-          category_id: categoryId,
-          item_id: itemId,
-          amount: transaction.amount,
-          description: transaction.description,
-          status: transaction.status,
-          expected_date: transaction.expectedDate || null,
-          official: transaction.official,
-          count: transaction.count,
-          submitted_by: transaction.submittedBy,
-          approval_status: 'pending',
-          attachments: transaction.attachments || []
-        }])
+        .insert([transactionData])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
       const newTransaction = {
         ...data,
