@@ -54,15 +54,6 @@ const CreateTransaction = () => {
     setValue('itemId', '');
   }, [watchedCategory, setValue]);
 
-  console.log('Debug info:', {
-    watchedType,
-    watchedCategory: watchedCategory ? parseInt(watchedCategory) : null,
-    allCategories: categories.map(c => ({ id: c.id, name: c.name, type: c.type })),
-    filteredCategories: filteredCategories.map(c => ({ id: c.id, name: c.name })),
-    allItems: items.map(i => ({ id: i.id, name: i.name, categoryId: i.categoryId })),
-    filteredItems: filteredItems.map(i => ({ id: i.id, name: i.name }))
-  });
-
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
     setSelectedFiles(prev => [...prev, ...files]);
@@ -75,6 +66,7 @@ const CreateTransaction = () => {
   const onSubmit = async (data) => {
     if (isSubmitting) return;
 
+    console.log('=== TRANSACTION SUBMISSION START ===');
     console.log('Form submission data:', data);
 
     // Validate that category and item are selected
@@ -106,21 +98,27 @@ const CreateTransaction = () => {
     const categoryExists = categories.find(c => c.id === categoryId);
     const itemExists = items.find(i => i.id === itemId);
 
-    console.log('Validation check:', {
-      categoryId,
-      itemId,
-      categoryExists,
-      itemExists,
-      categoriesCount: categories.length,
-      itemsCount: items.length
+    console.log('Validation details:', {
+      formCategoryId: data.categoryId,
+      formItemId: data.itemId,
+      parsedCategoryId: categoryId,
+      parsedItemId: itemId,
+      categoryExists: categoryExists,
+      itemExists: itemExists,
+      allCategories: categories.map(c => ({ id: c.id, name: c.name, type: c.type })),
+      allItems: items.map(i => ({ id: i.id, name: i.name, categoryId: i.categoryId })),
+      filteredCategories: filteredCategories.map(c => ({ id: c.id, name: c.name })),
+      filteredItems: filteredItems.map(i => ({ id: i.id, name: i.name }))
     });
 
     if (!categoryExists) {
+      console.error('Category validation failed!');
       toast.error('Selected category is invalid. Please refresh the page and try again.');
       return;
     }
 
     if (!itemExists) {
+      console.error('Item validation failed!');
       toast.error('Selected item is invalid. Please refresh the page and try again.');
       return;
     }
@@ -146,8 +144,17 @@ const CreateTransaction = () => {
         }))
       };
 
-      console.log('Submitting transaction:', transactionData);
+      console.log('Calling addTransaction with data:', transactionData);
+      console.log('addTransaction function:', typeof addTransaction);
+      
+      // Ensure we're calling the transaction function, not item function
+      if (typeof addTransaction !== 'function') {
+        throw new Error('addTransaction function is not available');
+      }
+
       await addTransaction(transactionData);
+      
+      console.log('Transaction created successfully!');
       
       reset({
         submittedBy: user?.name,
@@ -159,15 +166,19 @@ const CreateTransaction = () => {
         itemId: ''
       });
       setSelectedFiles([]);
+      
+      toast.success('Transaction created successfully!');
+      
     } catch (error) {
       console.error('Error creating transaction:', error);
-      toast.error('Failed to create transaction');
+      toast.error(`Failed to create transaction: ${error.message}`);
     } finally {
       setIsSubmitting(false);
+      console.log('=== TRANSACTION SUBMISSION END ===');
     }
   };
 
-  // Show loading if categories or items are not loaded yet
+  // Show loading if categories are not loaded yet
   if (categories.length === 0) {
     return (
       <div className="max-w-2xl mx-auto">
@@ -421,13 +432,14 @@ const CreateTransaction = () => {
 
             {/* Debug Information */}
             <div className="bg-gray-50 p-4 rounded-lg text-xs text-gray-600">
-              <p><strong>Debug:</strong></p>
+              <p><strong>Debug Info:</strong></p>
               <p>Categories loaded: {categories.length}</p>
               <p>Items loaded: {items.length}</p>
               <p>Selected type: {watchedType}</p>
-              <p>Selected category: {watchedCategory}</p>
+              <p>Selected category: {watchedCategory} (parsed: {watchedCategory ? parseInt(watchedCategory) : 'none'})</p>
               <p>Filtered categories: {filteredCategories.length}</p>
               <p>Filtered items: {filteredItems.length}</p>
+              <p>addTransaction function available: {typeof addTransaction === 'function' ? 'YES' : 'NO'}</p>
             </div>
 
             {/* Submit Button */}
@@ -438,7 +450,7 @@ const CreateTransaction = () => {
                 className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <SafeIcon icon={FiSave} className="w-4 h-4 mr-2" />
-                {isSubmitting ? 'Creating...' : t('createTransaction')}
+                {isSubmitting ? 'Creating Transaction...' : t('createTransaction')}
               </button>
             </div>
           </form>

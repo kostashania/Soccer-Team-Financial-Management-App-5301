@@ -291,6 +291,9 @@ export const DataProvider = ({ children }) => {
   // Transaction functions
   const addTransaction = async (transaction) => {
     try {
+      console.log('=== ADD TRANSACTION FUNCTION CALLED ===');
+      console.log('Transaction data received:', transaction);
+
       // Validate required fields
       if (!transaction.categoryId || !transaction.itemId) {
         throw new Error('Category and item must be selected');
@@ -300,7 +303,7 @@ export const DataProvider = ({ children }) => {
       const categoryId = parseInt(transaction.categoryId);
       const itemId = parseInt(transaction.itemId);
 
-      console.log('Transaction validation:', {
+      console.log('Transaction validation in addTransaction:', {
         originalCategoryId: transaction.categoryId,
         originalItemId: transaction.itemId,
         parsedCategoryId: categoryId,
@@ -317,7 +320,7 @@ export const DataProvider = ({ children }) => {
       const categoryExists = categories.find(c => c.id === categoryId);
       const itemExists = items.find(i => i.id === itemId);
 
-      console.log('Existence check:', {
+      console.log('Existence check in addTransaction:', {
         categoryId,
         itemId,
         categoryExists,
@@ -327,12 +330,12 @@ export const DataProvider = ({ children }) => {
       });
 
       if (!categoryExists) {
-        console.error('Category not found. Available categories:', categories);
+        console.error('Category not found in addTransaction. Available categories:', categories);
         throw new Error('Selected category does not exist');
       }
 
       if (!itemExists) {
-        console.error('Item not found. Available items:', items);
+        console.error('Item not found in addTransaction. Available items:', items);
         throw new Error('Selected item does not exist');
       }
 
@@ -351,7 +354,7 @@ export const DataProvider = ({ children }) => {
         attachments: transaction.attachments || []
       };
 
-      console.log('Submitting transaction with data:', transactionData);
+      console.log('Submitting transaction to database:', transactionData);
 
       const { data, error } = await supabase
         .from('transactions_stf2024')
@@ -360,9 +363,11 @@ export const DataProvider = ({ children }) => {
         .single();
 
       if (error) {
-        console.error('Supabase error:', error);
+        console.error('Supabase error in addTransaction:', error);
         throw error;
       }
+
+      console.log('Transaction inserted successfully:', data);
 
       const newTransaction = {
         ...data,
@@ -381,9 +386,12 @@ export const DataProvider = ({ children }) => {
 
       setTransactions(prev => [newTransaction, ...prev]);
       toast.success('Transaction created successfully!');
+      
+      console.log('=== ADD TRANSACTION FUNCTION COMPLETED ===');
     } catch (error) {
-      console.error('Error adding transaction:', error);
+      console.error('Error in addTransaction function:', error);
       toast.error(`Failed to create transaction: ${error.message}`);
+      throw error; // Re-throw so the form can handle it
     }
   };
 
@@ -447,6 +455,7 @@ export const DataProvider = ({ children }) => {
   // Category functions
   const addCategory = async (category) => {
     try {
+      console.log('=== ADD CATEGORY FUNCTION CALLED ===');
       console.log('Adding category:', category);
       
       const { data, error } = await supabase
@@ -473,6 +482,7 @@ export const DataProvider = ({ children }) => {
 
       setCategories(prev => [...prev, newCategory]);
       toast.success('Category added successfully!');
+      console.log('=== ADD CATEGORY FUNCTION COMPLETED ===');
     } catch (error) {
       console.error('Error adding category:', error);
       toast.error(`Failed to add category: ${error.message}`);
@@ -537,6 +547,7 @@ export const DataProvider = ({ children }) => {
   // Item functions
   const addItem = async (item) => {
     try {
+      console.log('=== ADD ITEM FUNCTION CALLED ===');
       console.log('Adding item:', item);
       console.log('Available categories:', categories);
 
@@ -585,6 +596,7 @@ export const DataProvider = ({ children }) => {
 
       setItems(prev => [...prev, newItem]);
       toast.success('Item added successfully!');
+      console.log('=== ADD ITEM FUNCTION COMPLETED ===');
     } catch (error) {
       console.error('Error adding item:', error);
       toast.error(`Failed to add item: ${error.message}`);
