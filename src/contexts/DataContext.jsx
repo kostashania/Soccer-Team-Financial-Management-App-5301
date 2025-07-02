@@ -14,7 +14,7 @@ export const useData = () => {
 };
 
 export const DataProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { user, tenant } = useAuth();
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
@@ -38,16 +38,15 @@ export const DataProvider = ({ children }) => {
 
   // Fetch data from Supabase
   const fetchData = async () => {
-    // Don't fetch data for superadmin
-    if (user?.role === 'superadmin') {
+    // Don't fetch data for superadmin or if user doesn't exist
+    if (!user || user?.role === 'superadmin') {
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      
-      console.log('Starting data fetch...');
+      console.log('Starting data fetch for user:', user);
 
       // Fetch categories with better error handling
       console.log('Fetching categories...');
@@ -61,11 +60,13 @@ export const DataProvider = ({ children }) => {
           console.error('Categories error:', categoriesError);
           setCategories([]);
         } else {
-          setCategories(categoriesData?.map(cat => ({
+          const mappedCategories = categoriesData?.map(cat => ({
             id: cat.id,
             name: cat.name,
             type: cat.type
-          })) || []);
+          })) || [];
+          console.log('Categories loaded:', mappedCategories);
+          setCategories(mappedCategories);
         }
       } catch (error) {
         console.error('Categories fetch error:', error);
@@ -84,11 +85,13 @@ export const DataProvider = ({ children }) => {
           console.error('Items error:', itemsError);
           setItems([]);
         } else {
-          setItems(itemsData?.map(item => ({
+          const mappedItems = itemsData?.map(item => ({
             id: item.id,
             name: item.name,
             categoryId: item.category_id
-          })) || []);
+          })) || [];
+          console.log('Items loaded:', mappedItems);
+          setItems(mappedItems);
         }
       } catch (error) {
         console.error('Items fetch error:', error);
@@ -107,7 +110,7 @@ export const DataProvider = ({ children }) => {
           console.error('Transactions error:', transactionsError);
           setTransactions([]);
         } else {
-          setTransactions(transactionsData?.map(trans => ({
+          const mappedTransactions = transactionsData?.map(trans => ({
             ...trans,
             id: trans.id,
             categoryId: trans.category_id,
@@ -120,7 +123,9 @@ export const DataProvider = ({ children }) => {
             disapprovedAt: trans.disapproved_at,
             expectedDate: trans.expected_date,
             createdAt: trans.created_at
-          })) || []);
+          })) || [];
+          console.log('Transactions loaded:', mappedTransactions.length);
+          setTransactions(mappedTransactions);
         }
       } catch (error) {
         console.error('Transactions fetch error:', error);
@@ -179,7 +184,10 @@ export const DataProvider = ({ children }) => {
 
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error(`Failed to load data: ${error.message}`);
+      // Only show error toast if it's not a UUID error from undefined values
+      if (!error.message.includes('invalid input syntax for type uuid')) {
+        toast.error(`Failed to load data: ${error.message}`);
+      }
       setConnectionStatus('disconnected');
     } finally {
       setLoading(false);
@@ -197,6 +205,8 @@ export const DataProvider = ({ children }) => {
       } else {
         setLoading(false);
       }
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
@@ -299,10 +309,14 @@ export const DataProvider = ({ children }) => {
       const itemExists = items.find(i => i.id === itemId);
 
       if (!categoryExists) {
+        console.log('Available categories:', categories);
+        console.log('Looking for category ID:', categoryId);
         throw new Error('Selected category does not exist');
       }
 
       if (!itemExists) {
+        console.log('Available items:', items);
+        console.log('Looking for item ID:', itemId);
         throw new Error('Selected item does not exist');
       }
 
@@ -428,12 +442,13 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      setCategories(prev => [...prev, {
+      const newCategory = {
         id: data.id,
         name: data.name,
         type: data.type
-      }]);
+      };
 
+      setCategories(prev => [...prev, newCategory]);
       toast.success('Category added successfully!');
     } catch (error) {
       console.error('Error adding category:', error);

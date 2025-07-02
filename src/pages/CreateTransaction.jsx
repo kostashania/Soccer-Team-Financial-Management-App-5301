@@ -77,9 +77,32 @@ const CreateTransaction = () => {
       return;
     }
 
+    // Make sure categories and items are loaded
+    if (categories.length === 0) {
+      toast.error('Categories not loaded. Please refresh the page and try again.');
+      return;
+    }
+
+    if (items.length === 0) {
+      toast.error('Items not loaded. Please refresh the page and try again.');
+      return;
+    }
+
     // Validate that the selected category and item exist
-    const categoryExists = categories.find(c => c.id === parseInt(data.categoryId));
-    const itemExists = items.find(i => i.id === parseInt(data.itemId));
+    const categoryId = parseInt(data.categoryId);
+    const itemId = parseInt(data.itemId);
+    
+    const categoryExists = categories.find(c => c.id === categoryId);
+    const itemExists = items.find(i => i.id === itemId);
+
+    console.log('Validation check:', {
+      categoryId,
+      itemId,
+      categoryExists,
+      itemExists,
+      categoriesCount: categories.length,
+      itemsCount: items.length
+    });
 
     if (!categoryExists) {
       toast.error('Selected category is invalid. Please refresh the page and try again.');
@@ -96,8 +119,8 @@ const CreateTransaction = () => {
     try {
       const transactionData = {
         type: data.type,
-        categoryId: parseInt(data.categoryId), // Ensure it's an integer
-        itemId: parseInt(data.itemId), // Ensure it's an integer
+        categoryId: categoryId, // Ensure it's an integer
+        itemId: itemId, // Ensure it's an integer
         amount: parseFloat(data.amount),
         description: data.description,
         status: data.status,
@@ -124,6 +147,18 @@ const CreateTransaction = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Show loading if categories or items are not loaded yet
+  if (categories.length === 0 || items.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mr-3"></div>
+          <span>Loading categories and items...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto">

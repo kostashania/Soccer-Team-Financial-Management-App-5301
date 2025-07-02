@@ -8,32 +8,31 @@ import { useAuth } from '../contexts/AuthContext';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
-const { 
-  FiPlus, FiEdit3, FiCopy, FiTrash2, FiSettings, FiGlobe, FiUsers, 
-  FiCalendar, FiDollarSign, FiMail, FiEye, FiSave, FiX, FiBuilding 
-} = FiIcons;
+const { FiPlus, FiEdit3, FiCopy, FiTrash2, FiSettings, FiGlobe, FiUsers, FiCalendar, FiDollarSign, FiMail, FiEye, FiSave, FiX, FiBuilding, FiLogOut } = FiIcons;
 
 const SuperAdminDashboard = () => {
-  const { user } = useAuth();
-  const {
-    tenants,
-    globalSettings,
-    loading,
-    createTenant,
-    updateTenant,
-    duplicateTenant,
-    updateGlobalSettings,
-    isSuperAdmin
+  const { user, logout } = useAuth();
+  const { 
+    tenants, 
+    globalSettings, 
+    loading, 
+    createTenant, 
+    updateTenant, 
+    duplicateTenant, 
+    updateGlobalSettings, 
+    isSuperAdmin 
   } = useSuperAdmin();
 
   const [activeTab, setActiveTab] = useState('tenants');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState(null);
   const [editingTenant, setEditingTenant] = useState(null);
 
   const createForm = useForm();
   const duplicateForm = useForm();
+  const editForm = useForm();
   const settingsForm = useForm({
     defaultValues: globalSettings || {}
   });
@@ -64,15 +63,33 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  const handleEditTenant = async (data) => {
+    if (!editingTenant) return;
+    
+    const updates = {
+      name: data.name,
+      domain: data.domain,
+      plan: data.plan,
+      active: data.active
+    };
+
+    const result = await updateTenant(editingTenant.id, updates);
+    if (result.success) {
+      setShowEditModal(false);
+      setEditingTenant(null);
+      editForm.reset();
+    }
+  };
+
   const handleDuplicateTenant = async (data) => {
     if (!selectedTenant) return;
-    
+
     const result = await duplicateTenant(
       selectedTenant.id,
       data.newDomain,
       data.newName
     );
-    
+
     if (result.success) {
       setShowDuplicateModal(false);
       setSelectedTenant(null);
@@ -89,6 +106,17 @@ const SuperAdminDashboard = () => {
 
   const handleToggleTenantStatus = async (tenant) => {
     await updateTenant(tenant.id, { active: !tenant.active });
+  };
+
+  const openEditModal = (tenant) => {
+    setEditingTenant(tenant);
+    editForm.reset({
+      name: tenant.name,
+      domain: tenant.domain,
+      plan: tenant.plan,
+      active: tenant.active
+    });
+    setShowEditModal(true);
   };
 
   const tabs = [
@@ -114,9 +142,20 @@ const SuperAdminDashboard = () => {
         transition={{ duration: 0.5 }}
       >
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
-          <p className="mt-2 text-gray-600">Manage all tenants and global settings</p>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
+            <p className="mt-2 text-gray-600">Manage all tenants and global settings</p>
+          </div>
+          
+          {/* Logout Button */}
+          <button
+            onClick={logout}
+            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            <SafeIcon icon={FiLogOut} className="w-4 h-4 mr-2" />
+            Sign Out
+          </button>
         </div>
 
         {/* Stats */}
@@ -274,21 +313,21 @@ const SuperAdminDashboard = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex space-x-2">
                             <button
+                              onClick={() => openEditModal(tenant)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Edit"
+                            >
+                              <SafeIcon icon={FiEdit3} className="w-4 h-4" />
+                            </button>
+                            <button
                               onClick={() => {
                                 setSelectedTenant(tenant);
                                 setShowDuplicateModal(true);
                               }}
-                              className="text-blue-600 hover:text-blue-900"
+                              className="text-green-600 hover:text-green-900"
                               title="Duplicate"
                             >
                               <SafeIcon icon={FiCopy} className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => setEditingTenant(tenant)}
-                              className="text-green-600 hover:text-green-900"
-                              title="Edit"
-                            >
-                              <SafeIcon icon={FiEdit3} className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -311,7 +350,6 @@ const SuperAdminDashboard = () => {
           >
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6">Global Pre-Login Settings</h2>
-              
               <form onSubmit={settingsForm.handleSubmit(handleUpdateGlobalSettings)} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -417,6 +455,25 @@ const SuperAdminDashboard = () => {
           </motion.div>
         )}
 
+        {/* Email Reminders Tab */}
+        {activeTab === 'reminders' && (
+          <motion.div
+            className="space-y-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Email Reminder Settings</h2>
+              <div className="text-center py-8">
+                <SafeIcon icon={FiMail} className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">Email reminder system will be implemented here</p>
+                <p className="text-sm text-gray-500 mt-2">Configure automatic reminders for subscription renewals</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Create Tenant Modal */}
         {showCreateModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -512,6 +569,94 @@ const SuperAdminDashboard = () => {
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
+                    className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Edit Tenant Modal */}
+        {showEditModal && editingTenant && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              className="bg-white rounded-lg max-w-md w-full p-6"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-gray-900">Edit Tenant</h2>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <SafeIcon icon={FiX} className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={editForm.handleSubmit(handleEditTenant)} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tenant Name *
+                  </label>
+                  <input
+                    type="text"
+                    {...editForm.register('name', { required: 'Name is required' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Domain *
+                  </label>
+                  <input
+                    type="text"
+                    {...editForm.register('domain', { required: 'Domain is required' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Plan
+                  </label>
+                  <select
+                    {...editForm.register('plan')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="basic">Basic</option>
+                    <option value="premium">Premium</option>
+                    <option value="enterprise">Enterprise</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      {...editForm.register('active')}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Active</span>
+                  </label>
+                </div>
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    type="submit"
+                    className="flex-1 flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    <SafeIcon icon={FiSave} className="w-4 h-4 mr-2" />
+                    Update Tenant
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
                     className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
                   >
                     Cancel
