@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
+import AppLogo from '../common/AppLogo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import clsx from 'clsx';
@@ -56,12 +57,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         transition={{ duration: 0.3 }}
       >
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-              <SafeIcon icon={FiDollarSign} className="w-5 h-5 text-white" />
-            </div>
-            <span className="ml-3 text-lg font-semibold text-gray-900">Finance</span>
-          </div>
+          <AppLogo size="sm" />
           <button
             onClick={onClose}
             className="lg:hidden p-1 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"

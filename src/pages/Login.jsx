@@ -3,11 +3,13 @@ import { Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../components/common/SafeIcon';
+import AppLogo from '../components/common/AppLogo';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useBranding } from '../contexts/BrandingContext';
 import toast from 'react-hot-toast';
 
-const { FiMail, FiLock, FiEye, FiEyeOff, FiDollarSign, FiGlobe } = FiIcons;
+const { FiMail, FiLock, FiEye, FiEyeOff, FiGlobe } = FiIcons;
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -16,6 +18,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { user, login } = useAuth();
   const { language, changeLanguage, t } = useLanguage();
+  const { branding } = useBranding();
 
   if (user) {
     return <Navigate to="/dashboard" replace />;
@@ -24,7 +27,6 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       const result = await login(email, password);
       if (result.success) {
@@ -65,16 +67,13 @@ const Login = () => {
       >
         <div className="text-center">
           <motion.div
-            className="mx-auto h-16 w-16 bg-primary-500 rounded-full flex items-center justify-center"
+            className="flex justify-center mb-6"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, duration: 0.3 }}
           >
-            <SafeIcon icon={FiDollarSign} className="h-8 w-8 text-white" />
+            <AppLogo size="xl" />
           </motion.div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Soccer Team Finance
-          </h2>
           <p className="mt-2 text-sm text-gray-600">
             {t('signIn')}
           </p>

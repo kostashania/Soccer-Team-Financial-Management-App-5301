@@ -1,10 +1,19 @@
 import { createClient } from '@supabase/supabase-js'
 
-const SUPABASE_URL = 'https://bjelydvroavsqczejpgd.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqZWx5ZHZyb2F2c3FjemVqcGdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjE2MDcsImV4cCI6MjA2NjU5NzYwN30.f-693IO1d0TCBQRiWcSTvjCT8I7bb0t9Op_gvD5LeIE'
+// Get environment variables
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-if (SUPABASE_URL === 'https://<PROJECT-ID>.supabase.co' || SUPABASE_ANON_KEY === '<ANON_KEY>') {
-  throw new Error('Missing Supabase variables')
+// Validate environment variables
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error(
+    'Missing Supabase environment variables. Please check your .env file and ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.'
+  )
+}
+
+// Validate URL format
+if (!SUPABASE_URL.startsWith('https://') || !SUPABASE_URL.includes('.supabase.co')) {
+  throw new Error('Invalid Supabase URL format. Expected: https://your-project.supabase.co')
 }
 
 // Create client with proper configuration
@@ -23,9 +32,9 @@ export const testConnection = async () => {
       .from('categories_stf2024')
       .select('id')
       .limit(1)
-
+    
     if (error) throw error
-
+    
     return { success: true, message: 'Connected successfully' }
   } catch (error) {
     console.error('Connection test failed:', error)
@@ -41,7 +50,7 @@ export const getDatabaseInfo = () => {
     schema: 'public', // Supabase uses public schema by default
     tables: [
       'categories_stf2024',
-      'items_stf2024',
+      'items_stf2024', 
       'transactions_stf2024',
       'platform_buttons_stf2024',
       'users_stf2024'

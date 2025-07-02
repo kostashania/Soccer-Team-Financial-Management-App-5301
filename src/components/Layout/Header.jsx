@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
+import AppLogo from '../common/AppLogo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -33,8 +34,7 @@ const Header = ({ onMenuClick }) => {
             <SafeIcon icon={FiMenu} className="w-6 h-6" />
           </button>
           <div className="ml-4 lg:ml-0">
-            <h1 className="text-2xl font-bold text-gray-900">Soccer Team Finance</h1>
-            <p className="text-sm text-gray-600">Financial Management System</p>
+            <AppLogo size="md" />
           </div>
         </div>
 

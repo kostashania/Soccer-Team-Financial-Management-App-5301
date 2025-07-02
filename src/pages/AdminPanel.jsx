@@ -3,37 +3,37 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../components/common/SafeIcon';
+import BrandingSettings from '../components/admin/BrandingSettings';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getDatabaseInfo, testConnection } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
-const { 
-  FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink, 
-  FiDatabase, FiWifi, FiWifiOff, FiRefreshCw, FiInfo, FiEdit3, FiSave, 
-  FiX, FiUserPlus, FiMail, FiShield, FiLock, FiGlobe, FiSearch, 
-  FiAlertTriangle, FiEye 
+const {
+  FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink, FiDatabase,
+  FiWifi, FiWifiOff, FiRefreshCw, FiInfo, FiEdit3, FiSave, FiX, FiUserPlus, FiMail,
+  FiShield, FiLock, FiGlobe, FiSearch, FiAlertTriangle, FiEye, FiPalette
 } = FiIcons;
 
 const AdminPanel = () => {
   const { user } = useAuth();
   const { t, getAllTranslations } = useLanguage();
   const {
-    categories, items, platformButtons, transactions, users,
-    connectionStatus, addCategory, updateCategory, deleteCategory,
-    addItem, updateItem, deleteItem, addPlatformButton, deletePlatformButton,
-    deleteTransaction, addUser, updateUser, deleteUser, fetchData, checkConnection
+    categories, items, platformButtons, transactions, users, connectionStatus,
+    addCategory, updateCategory, deleteCategory, addItem, updateItem, deleteItem,
+    addPlatformButton, deletePlatformButton, deleteTransaction, addUser, updateUser,
+    deleteUser, fetchData, checkConnection
   } = useData();
 
-  const [activeTab, setActiveTab] = useState('database');
+  const [activeTab, setActiveTab] = useState('branding'); // Changed default to branding
   const [dbInfo, setDbInfo] = useState(null);
   const [testing, setTesting] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [translationSearch, setTranslationSearch] = useState('');
-  
+
   // Clear database states
   const [showClearDbModal, setShowClearDbModal] = useState(false);
   const [clearDbConfirmation, setClearDbConfirmation] = useState('');
@@ -61,6 +61,7 @@ const AdminPanel = () => {
     );
   }
 
+  // ... (keeping all existing functions for categories, items, users, etc.)
   const onAddCategory = (data) => {
     addCategory(data);
     categoryForm.reset();
@@ -170,10 +171,10 @@ const AdminPanel = () => {
       // Import supabase client
       const { default: supabase } = await import('../lib/supabase');
 
-      // Clear all tables except users
+      // Clear all tables except users and app_settings
       const tablesToClear = [
         'transactions_stf2024',
-        'categories_stf2024', 
+        'categories_stf2024',
         'items_stf2024',
         'platform_buttons_stf2024'
       ];
@@ -183,7 +184,7 @@ const AdminPanel = () => {
           .from(table)
           .delete()
           .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
-        
+
         if (error) {
           console.error(`Error clearing ${table}:`, error);
           toast.error(`Failed to clear ${table}`);
@@ -193,10 +194,9 @@ const AdminPanel = () => {
 
       // Refresh data after clearing
       await fetchData();
-      
       setShowClearDbModal(false);
       setClearDbConfirmation('');
-      toast.success('Database cleared successfully (users preserved)');
+      toast.success('Database cleared successfully (users and branding preserved)');
     } catch (error) {
       console.error('Error clearing database:', error);
       toast.error('Failed to clear database');
@@ -236,7 +236,7 @@ const AdminPanel = () => {
     const englishText = allTranslations.en[key] || '';
     const greekText = allTranslations.el[key] || '';
     const searchLower = translationSearch.toLowerCase();
-    
+
     return (
       key.toLowerCase().includes(searchLower) ||
       englishText.toLowerCase().includes(searchLower) ||
@@ -255,6 +255,7 @@ const AdminPanel = () => {
   };
 
   const tabs = [
+    { id: 'branding', label: 'App Branding', icon: FiPalette },
     { id: 'database', label: 'Database', icon: FiDatabase },
     { id: 'users', label: t('userManagement'), icon: FiUsers },
     { id: 'translations', label: t('translations'), icon: FiGlobe },
@@ -278,10 +279,10 @@ const AdminPanel = () => {
           <SafeIcon icon={FiAlertTriangle} className="w-6 h-6 text-red-600 mr-3" />
           <h2 className="text-xl font-bold text-gray-900">Clear Database</h2>
         </div>
-        
+
         <div className="mb-6">
           <p className="text-gray-700 mb-4">
-            <strong>⚠️ WARNING:</strong> This action will permanently delete ALL data except users:
+            <strong>⚠️ WARNING:</strong> This action will permanently delete ALL data except users and branding:
           </p>
           <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 mb-4">
             <li>All transactions ({transactions.length} records)</li>
@@ -290,7 +291,7 @@ const AdminPanel = () => {
             <li>All platform buttons ({platformButtons.length} records)</li>
           </ul>
           <p className="text-sm text-green-600 mb-4">
-            ✅ Users will be preserved ({users.length} users)
+            ✅ Users and app branding will be preserved ({users.length} users)
           </p>
           <p className="text-red-600 font-medium">
             This action cannot be undone!
@@ -346,7 +347,7 @@ const AdminPanel = () => {
           <SafeIcon icon={FiAlertTriangle} className="w-6 h-6 text-red-600 mr-3" />
           <h2 className="text-xl font-bold text-gray-900">Delete Transaction</h2>
         </div>
-        
+
         {transactionToDelete && (
           <div className="mb-6">
             <p className="text-gray-700 mb-4">
@@ -438,6 +439,111 @@ const AdminPanel = () => {
         </nav>
       </div>
 
+      {/* App Branding Tab */}
+      {activeTab === 'branding' && <BrandingSettings />}
+
+      {/* Database Tab */}
+      {activeTab === 'database' && (
+        <motion.div
+          className="space-y-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          {/* Connection Status */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Database Connection Status</h2>
+              <div className="flex items-center space-x-2">
+                <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
+                  connectionStatus === 'connected'
+                    ? 'bg-green-100 text-green-800'
+                    : connectionStatus === 'disconnected'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                  <SafeIcon
+                    icon={connectionStatus === 'connected' ? FiWifi : FiWifiOff}
+                    className="w-4 h-4"
+                  />
+                  <span className="capitalize">{connectionStatus}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Database URL</label>
+                <p className="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded">
+                  {dbInfo?.url}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Project ID</label>
+                <p className="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded">
+                  {dbInfo?.project_id}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={handleTestConnection}
+                disabled={testing}
+                className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50"
+              >
+                <SafeIcon icon={FiDatabase} className="w-4 h-4 mr-2" />
+                {testing ? 'Testing...' : 'Test Connection'}
+              </button>
+              <button
+                onClick={handleRefreshData}
+                className="flex items-center px-4 py-2 bg-success-600 text-white rounded-md hover:bg-success-700 transition-colors"
+              >
+                <SafeIcon icon={FiRefreshCw} className="w-4 h-4 mr-2" />
+                Refresh Data
+              </button>
+            </div>
+          </div>
+
+          {/* Data Summary with Clear Database */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Data Summary</h2>
+              <button
+                onClick={() => setShowClearDbModal(true)}
+                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              >
+                <SafeIcon icon={FiTrash2} className="w-4 h-4 mr-2" />
+                Clear Database
+              </button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <p className="text-2xl font-bold text-blue-600">{categories.length}</p>
+                <p className="text-sm text-gray-600">Categories</p>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <p className="text-2xl font-bold text-green-600">{items.length}</p>
+                <p className="text-sm text-gray-600">Items</p>
+              </div>
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
+                <p className="text-2xl font-bold text-purple-600">{transactions.length}</p>
+                <p className="text-sm text-gray-600">Transactions</p>
+              </div>
+              <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                <p className="text-2xl font-bold text-yellow-600">{platformButtons.length}</p>
+                <p className="text-sm text-gray-600">Platform Buttons</p>
+              </div>
+              <div className="text-center p-4 bg-red-50 rounded-lg">
+                <p className="text-2xl font-bold text-red-600">{users?.length || 0}</p>
+                <p className="text-sm text-gray-600">Users</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* All other existing tabs remain the same... */}
       {/* Translation Management Tab */}
       {activeTab === 'translations' && (
         <motion.div
@@ -558,167 +664,8 @@ const AdminPanel = () => {
         </motion.div>
       )}
 
-      {/* Database Tab */}
-      {activeTab === 'database' && (
-        <motion.div
-          className="space-y-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {/* Connection Status */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Database Connection Status</h2>
-              <div className="flex items-center space-x-2">
-                <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
-                  connectionStatus === 'connected' 
-                    ? 'bg-green-100 text-green-800' 
-                    : connectionStatus === 'disconnected' 
-                    ? 'bg-red-100 text-red-800' 
-                    : 'bg-yellow-100 text-yellow-800'
-                }`}>
-                  <SafeIcon icon={connectionStatus === 'connected' ? FiWifi : FiWifiOff} className="w-4 h-4" />
-                  <span className="capitalize">{connectionStatus}</span>
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Database URL</label>
-                <p className="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded">
-                  {dbInfo?.url}
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Project ID</label>
-                <p className="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded">
-                  {dbInfo?.project_id}
-                </p>
-              </div>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={handleTestConnection}
-                disabled={testing}
-                className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50"
-              >
-                <SafeIcon icon={FiDatabase} className="w-4 h-4 mr-2" />
-                {testing ? 'Testing...' : 'Test Connection'}
-              </button>
-              <button
-                onClick={handleRefreshData}
-                className="flex items-center px-4 py-2 bg-success-600 text-white rounded-md hover:bg-success-700 transition-colors"
-              >
-                <SafeIcon icon={FiRefreshCw} className="w-4 h-4 mr-2" />
-                Refresh Data
-              </button>
-            </div>
-          </div>
-
-          {/* Data Summary with Clear Database */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Data Summary</h2>
-              <button
-                onClick={() => setShowClearDbModal(true)}
-                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-              >
-                <SafeIcon icon={FiTrash2} className="w-4 h-4 mr-2" />
-                Clear Database
-              </button>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <p className="text-2xl font-bold text-blue-600">{categories.length}</p>
-                <p className="text-sm text-gray-600">Categories</p>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <p className="text-2xl font-bold text-green-600">{items.length}</p>
-                <p className="text-sm text-gray-600">Items</p>
-              </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <p className="text-2xl font-bold text-purple-600">{transactions.length}</p>
-                <p className="text-sm text-gray-600">Transactions</p>
-              </div>
-              <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                <p className="text-2xl font-bold text-yellow-600">{platformButtons.length}</p>
-                <p className="text-sm text-gray-600">Platform Buttons</p>
-              </div>
-              <div className="text-center p-4 bg-red-50 rounded-lg">
-                <p className="text-2xl font-bold text-red-600">{users?.length || 0}</p>
-                <p className="text-sm text-gray-600">Users</p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* All Transactions Tab */}
-      {activeTab === 'transactions' && (
-        <motion.div
-          className="space-y-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center">
-                <SafeIcon icon={FiDatabase} className="w-6 h-6 text-primary-600 mr-3" />
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">All Transactions ({transactions.length})</h2>
-                  <p className="text-sm text-gray-600">Manage and delete transactions</p>
-                </div>
-              </div>
-            </div>
-
-            {transactions.length === 0 ? (
-              <div className="text-center py-8">
-                <SafeIcon icon={FiDatabase} className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">No transactions found</p>
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {transactions.map((transaction) => (
-                  <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-1">
-                        <h3 className="font-medium text-gray-900">{transaction.description}</h3>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          transaction.type === 'income' ? 'bg-success-100 text-success-800' : 'bg-danger-100 text-danger-800'
-                        }`}>
-                          {transaction.type}
-                        </span>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          transaction.approvalStatus === 'approved' ? 'bg-green-100 text-green-800' :
-                          transaction.approvalStatus === 'disapproved' ? 'bg-red-100 text-red-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {transaction.approvalStatus}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <span>${parseFloat(transaction.amount || 0).toLocaleString()}</span>
-                        <span>{getCategoryName(transaction.categoryId)} • {getItemName(transaction.itemId)}</span>
-                        <span>By: {transaction.submittedBy}</span>
-                        <span>{new Date(transaction.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteTransaction(transaction)}
-                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
-                      title="Delete Transaction"
-                    >
-                      <SafeIcon icon={FiTrash2} className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </motion.div>
-      )}
+      {/* All other tabs remain the same - just keeping the existing code for brevity */}
+      {/* I'll include the most important ones but keeping the response manageable */}
 
       {/* User Management Tab */}
       {activeTab === 'users' && (
@@ -733,10 +680,7 @@ const AdminPanel = () => {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editingUser ? t('editUser') : t('addNewUser')}
             </h2>
-            <form
-              onSubmit={userForm.handleSubmit(editingUser ? onUpdateUser : onAddUser)}
-              className="space-y-4"
-            >
+            <form onSubmit={userForm.handleSubmit(editingUser ? onUpdateUser : onAddUser)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -752,6 +696,7 @@ const AdminPanel = () => {
                     <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.name.message}</p>
                   )}
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('emailAddress')} *
@@ -769,6 +714,7 @@ const AdminPanel = () => {
                     <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.email.message}</p>
                   )}
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('role')} *
@@ -786,6 +732,7 @@ const AdminPanel = () => {
                     <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.role.message}</p>
                   )}
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('password')} *
@@ -802,6 +749,7 @@ const AdminPanel = () => {
                   )}
                 </div>
               </div>
+
               <div className="flex space-x-3">
                 <button
                   type="submit"
@@ -840,15 +788,15 @@ const AdminPanel = () => {
                 >
                   <div className="flex items-center space-x-4">
                     <div className={`p-2 rounded-full ${
-                      userItem.role === 'admin' ? 'bg-red-100' : 
+                      userItem.role === 'admin' ? 'bg-red-100' :
                       userItem.role === 'board' ? 'bg-blue-100' : 'bg-green-100'
                     }`}>
-                      <SafeIcon 
-                        icon={userItem.role === 'admin' ? FiShield : userItem.role === 'board' ? FiUsers : FiMail} 
+                      <SafeIcon
+                        icon={userItem.role === 'admin' ? FiShield : userItem.role === 'board' ? FiUsers : FiMail}
                         className={`w-5 h-5 ${
-                          userItem.role === 'admin' ? 'text-red-600' : 
+                          userItem.role === 'admin' ? 'text-red-600' :
                           userItem.role === 'board' ? 'text-blue-600' : 'text-green-600'
-                        }`} 
+                        }`}
                       />
                     </div>
                     <div>
@@ -860,7 +808,7 @@ const AdminPanel = () => {
                       </div>
                     </div>
                     <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                      userItem.role === 'admin' ? 'bg-red-100 text-red-800' : 
+                      userItem.role === 'admin' ? 'bg-red-100 text-red-800' :
                       userItem.role === 'board' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
                     }`}>
                       {userItem.role === 'admin' ? t('admin') : userItem.role === 'board' ? t('boardMember') : t('cashier')}
@@ -911,6 +859,7 @@ const AdminPanel = () => {
                   <li>• Platform configuration</li>
                 </ul>
               </div>
+
               <div className="border border-blue-200 rounded-lg p-4">
                 <div className="flex items-center mb-3">
                   <SafeIcon icon={FiUsers} className="w-5 h-5 text-blue-600 mr-2" />
@@ -925,6 +874,7 @@ const AdminPanel = () => {
                   <li>• Advanced filtering</li>
                 </ul>
               </div>
+
               <div className="border border-green-200 rounded-lg p-4">
                 <div className="flex items-center mb-3">
                   <SafeIcon icon={FiMail} className="w-5 h-5 text-green-600 mr-2" />
@@ -944,7 +894,75 @@ const AdminPanel = () => {
         </motion.div>
       )}
 
-      {/* Other tabs remain the same but will be enhanced with translations in future updates */}
+      {/* All Transactions Tab */}
+      {activeTab === 'transactions' && (
+        <motion.div
+          className="space-y-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <SafeIcon icon={FiDatabase} className="w-6 h-6 text-primary-600 mr-3" />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">All Transactions ({transactions.length})</h2>
+                  <p className="text-sm text-gray-600">Manage and delete transactions</p>
+                </div>
+              </div>
+            </div>
+
+            {transactions.length === 0 ? (
+              <div className="text-center py-8">
+                <SafeIcon icon={FiDatabase} className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No transactions found</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {transactions.map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-1">
+                        <h3 className="font-medium text-gray-900">{transaction.description}</h3>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          transaction.type === 'income' ? 'bg-success-100 text-success-800' : 'bg-danger-100 text-danger-800'
+                        }`}>
+                          {transaction.type}
+                        </span>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          transaction.approvalStatus === 'approved' ? 'bg-green-100 text-green-800' :
+                          transaction.approvalStatus === 'disapproved' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {transaction.approvalStatus}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        <span>${parseFloat(transaction.amount || 0).toLocaleString()}</span>
+                        <span>{getCategoryName(transaction.categoryId)} • {getItemName(transaction.itemId)}</span>
+                        <span>By: {transaction.submittedBy}</span>
+                        <span>{new Date(transaction.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteTransaction(transaction)}
+                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+                      title="Delete Transaction"
+                    >
+                      <SafeIcon icon={FiTrash2} className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Categories Tab */}
       {activeTab === 'categories' && (
         <motion.div
           className="space-y-6"
@@ -956,10 +974,7 @@ const AdminPanel = () => {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editingCategory ? 'Edit Category' : 'Add New Category'}
             </h2>
-            <form
-              onSubmit={categoryForm.handleSubmit(editingCategory ? onUpdateCategory : onAddCategory)}
-              className="space-y-4"
-            >
+            <form onSubmit={categoryForm.handleSubmit(editingCategory ? onUpdateCategory : onAddCategory)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -975,6 +990,7 @@ const AdminPanel = () => {
                     <p className="mt-1 text-sm text-red-600">{categoryForm.formState.errors.name.message}</p>
                   )}
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Type *
@@ -992,6 +1008,7 @@ const AdminPanel = () => {
                   )}
                 </div>
               </div>
+
               <div className="flex space-x-3">
                 <button
                   type="submit"
@@ -1063,10 +1080,7 @@ const AdminPanel = () => {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editingItem ? 'Edit Item' : 'Add New Item'}
             </h2>
-            <form
-              onSubmit={itemForm.handleSubmit(editingItem ? onUpdateItem : onAddItem)}
-              className="space-y-4"
-            >
+            <form onSubmit={itemForm.handleSubmit(editingItem ? onUpdateItem : onAddItem)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1087,6 +1101,7 @@ const AdminPanel = () => {
                     <p className="mt-1 text-sm text-red-600">{itemForm.formState.errors.categoryId.message}</p>
                   )}
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Item Name *
@@ -1102,6 +1117,7 @@ const AdminPanel = () => {
                   )}
                 </div>
               </div>
+
               <div className="flex space-x-3">
                 <button
                   type="submit"
@@ -1188,6 +1204,7 @@ const AdminPanel = () => {
                     <p className="mt-1 text-sm text-red-600">{buttonForm.formState.errors.text.message}</p>
                   )}
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     URL *
@@ -1203,6 +1220,7 @@ const AdminPanel = () => {
                   )}
                 </div>
               </div>
+
               <button
                 type="submit"
                 className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
