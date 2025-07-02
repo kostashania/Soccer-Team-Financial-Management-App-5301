@@ -20,20 +20,34 @@ if (!SUPABASE_URL.startsWith('https://') || !SUPABASE_URL.includes('.supabase.co
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
-    autoRefreshToken: true
+    autoRefreshToken: true,
+    detectSessionInUrl: false
+  },
+  db: {
+    schema: 'public'
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'soccer-team-finance'
+    }
   }
 })
 
 // Test connection function
 export const testConnection = async () => {
   try {
-    // Simple select query to test connection
+    // Simple select query to test connection - using a table that should definitely exist
     const { data, error } = await supabase
-      .from('tenants')
+      .from('users_central')
       .select('id')
       .limit(1)
 
-    if (error) throw error
+    if (error) {
+      console.error('Connection test error:', error)
+      return { success: false, error: error.message }
+    }
+
+    console.log('Connection test successful:', data)
     return { success: true, message: 'Connected successfully' }
   } catch (error) {
     console.error('Connection test failed:', error)
@@ -48,10 +62,16 @@ export const getDatabaseInfo = () => {
     project_id: SUPABASE_URL.split('//')[1].split('.')[0],
     schema: 'public',
     tables: [
-      'tenants',
-      'users_central', 
+      'users_central',
+      'tenants', 
       'global_settings',
-      'subscription_reminders'
+      'subscription_reminders',
+      'users_stf2024',
+      'categories_stf2024',
+      'items_stf2024',
+      'transactions_stf2024',
+      'platform_buttons_stf2024',
+      'app_settings_stf2024'
     ]
   }
 }

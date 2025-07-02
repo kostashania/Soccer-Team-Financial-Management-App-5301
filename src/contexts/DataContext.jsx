@@ -23,119 +23,150 @@ export const DataProvider = ({ children }) => {
 
   // Test database connection
   const checkConnection = async () => {
-    const result = await testConnection();
-    setConnectionStatus(result.success ? 'connected' : 'disconnected');
-    return result;
+    try {
+      const result = await testConnection();
+      setConnectionStatus(result.success ? 'connected' : 'disconnected');
+      return result;
+    } catch (error) {
+      console.error('Connection check error:', error);
+      setConnectionStatus('disconnected');
+      return { success: false, error: error.message };
+    }
   };
 
   // Fetch data from Supabase
   const fetchData = async () => {
     try {
       setLoading(true);
+      
+      console.log('Starting data fetch...');
 
-      // First test connection
-      const connectionTest = await checkConnection();
-      if (!connectionTest.success) {
-        throw new Error(`Connection failed: ${connectionTest.error}`);
+      // Fetch categories with better error handling
+      console.log('Fetching categories...');
+      try {
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('categories_stf2024')
+          .select('*')
+          .order('name');
+
+        if (categoriesError) {
+          console.error('Categories error:', categoriesError);
+          setCategories([]);
+        } else {
+          setCategories(categoriesData?.map(cat => ({
+            id: cat.id,
+            name: cat.name,
+            type: cat.type
+          })) || []);
+        }
+      } catch (error) {
+        console.error('Categories fetch error:', error);
+        setCategories([]);
       }
 
-      // Fetch categories
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories_stf2024')
-        .select('*')
-        .order('name');
+      // Fetch items with better error handling
+      console.log('Fetching items...');
+      try {
+        const { data: itemsData, error: itemsError } = await supabase
+          .from('items_stf2024')
+          .select('*')
+          .order('name');
 
-      if (categoriesError) {
-        console.error('Categories error:', categoriesError);
-        throw categoriesError;
+        if (itemsError) {
+          console.error('Items error:', itemsError);
+          setItems([]);
+        } else {
+          setItems(itemsData?.map(item => ({
+            id: item.id,
+            name: item.name,
+            categoryId: item.category_id
+          })) || []);
+        }
+      } catch (error) {
+        console.error('Items fetch error:', error);
+        setItems([]);
       }
 
-      // Fetch items
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('items_stf2024')
-        .select('*')
-        .order('name');
+      // Fetch transactions with better error handling
+      console.log('Fetching transactions...');
+      try {
+        const { data: transactionsData, error: transactionsError } = await supabase
+          .from('transactions_stf2024')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      if (itemsError) {
-        console.error('Items error:', itemsError);
-        throw itemsError;
-      }
-
-      // Fetch transactions
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from('transactions_stf2024')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (transactionsError) {
-        console.error('Transactions error:', transactionsError);
-        throw transactionsError;
+        if (transactionsError) {
+          console.error('Transactions error:', transactionsError);
+          setTransactions([]);
+        } else {
+          setTransactions(transactionsData?.map(trans => ({
+            ...trans,
+            id: trans.id,
+            categoryId: trans.category_id,
+            itemId: trans.item_id,
+            submittedBy: trans.submitted_by,
+            approvalStatus: trans.approval_status,
+            approvedBy: trans.approved_by,
+            approvedAt: trans.approved_at,
+            disapprovedBy: trans.disapproved_by,
+            disapprovedAt: trans.disapproved_at,
+            expectedDate: trans.expected_date,
+            createdAt: trans.created_at
+          })) || []);
+        }
+      } catch (error) {
+        console.error('Transactions fetch error:', error);
+        setTransactions([]);
       }
 
       // Fetch platform buttons
-      const { data: buttonsData, error: buttonsError } = await supabase
-        .from('platform_buttons_stf2024')
-        .select('*')
-        .order('text');
+      console.log('Fetching platform buttons...');
+      try {
+        const { data: buttonsData, error: buttonsError } = await supabase
+          .from('platform_buttons_stf2024')
+          .select('*')
+          .order('text');
 
-      if (buttonsError) {
-        console.error('Buttons error:', buttonsError);
-        throw buttonsError;
+        if (buttonsError) {
+          console.error('Buttons error:', buttonsError);
+          setPlatformButtons([]);
+        } else {
+          setPlatformButtons(buttonsData?.map(btn => ({
+            ...btn,
+            id: btn.id
+          })) || []);
+        }
+      } catch (error) {
+        console.error('Buttons fetch error:', error);
+        setPlatformButtons([]);
       }
 
-      // Fetch users
-      const { data: usersData, error: usersError } = await supabase
-        .from('users_stf2024')
-        .select('*')
-        .order('name');
+      // Fetch users from the main users table
+      console.log('Fetching users...');
+      try {
+        const { data: usersData, error: usersError } = await supabase
+          .from('users_stf2024')
+          .select('*')
+          .order('name');
 
-      if (usersError) {
-        console.error('Users error:', usersError);
-        throw usersError;
+        if (usersError) {
+          console.error('Users error:', usersError);
+          setUsers([]);
+        } else {
+          setUsers(usersData?.map(user => ({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            password: user.password || 'password'
+          })) || []);
+        }
+      } catch (error) {
+        console.error('Users fetch error:', error);
+        setUsers([]);
       }
 
-      // Transform data with proper mapping
-      setCategories(categoriesData?.map(cat => ({
-        id: cat.id,
-        name: cat.name,
-        type: cat.type
-      })) || []);
-
-      setItems(itemsData?.map(item => ({
-        id: item.id,
-        name: item.name,
-        categoryId: item.category_id
-      })) || []);
-
-      setTransactions(transactionsData?.map(trans => ({
-        ...trans,
-        id: trans.id,
-        categoryId: trans.category_id,
-        itemId: trans.item_id,
-        submittedBy: trans.submitted_by,
-        approvalStatus: trans.approval_status,
-        approvedBy: trans.approved_by,
-        approvedAt: trans.approved_at,
-        disapprovedBy: trans.disapproved_by,
-        disapprovedAt: trans.disapproved_at,
-        expectedDate: trans.expected_date,
-        createdAt: trans.created_at
-      })) || []);
-
-      setPlatformButtons(buttonsData?.map(btn => ({
-        ...btn,
-        id: btn.id
-      })) || []);
-
-      setUsers(usersData?.map(user => ({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        password: user.password || 'password' // Include password field with fallback
-      })) || []);
-
-      toast.success('Data loaded successfully!');
+      console.log('Data fetch completed successfully');
       setConnectionStatus('connected');
 
     } catch (error) {
@@ -148,7 +179,12 @@ export const DataProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    fetchData();
+    // Delay initial fetch to avoid issues during app startup
+    const timer = setTimeout(() => {
+      fetchData();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, []);
 
   // User Management Functions
@@ -185,7 +221,6 @@ export const DataProvider = ({ children }) => {
   const updateUser = async (id, updates) => {
     try {
       console.log('Updating user with:', { id, updates });
-      
       const { data, error } = await supabase
         .from('users_stf2024')
         .update(updates)
@@ -196,7 +231,6 @@ export const DataProvider = ({ children }) => {
       if (error) throw error;
 
       console.log('User update response:', data);
-
       setUsers(prev => prev.map(user => 
         user.id === id ? {
           id: data.id,
@@ -231,15 +265,23 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  // Rest of the functions remain the same...
+  // Transaction functions
   const addTransaction = async (transaction) => {
     try {
+      // Ensure categoryId and itemId are valid integers
+      const categoryId = parseInt(transaction.categoryId);
+      const itemId = parseInt(transaction.itemId);
+
+      if (isNaN(categoryId) || isNaN(itemId)) {
+        throw new Error('Invalid category or item selected');
+      }
+
       const { data, error } = await supabase
         .from('transactions_stf2024')
         .insert([{
           type: transaction.type,
-          category_id: transaction.categoryId,
-          item_id: transaction.itemId,
+          category_id: categoryId,
+          item_id: itemId,
           amount: transaction.amount,
           description: transaction.description,
           status: transaction.status,
@@ -296,20 +338,22 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      setTransactions(prev => prev.map(t => t.id === id ? {
-        ...t,
-        ...updates,
-        categoryId: data.category_id,
-        itemId: data.item_id,
-        submittedBy: data.submitted_by,
-        approvalStatus: data.approval_status,
-        approvedBy: data.approved_by,
-        approvedAt: data.approved_at,
-        disapprovedBy: data.disapproved_by,
-        disapprovedAt: data.disapproved_at,
-        expectedDate: data.expected_date,
-        createdAt: data.created_at
-      } : t));
+      setTransactions(prev => prev.map(t => 
+        t.id === id ? {
+          ...t,
+          ...updates,
+          categoryId: data.category_id,
+          itemId: data.item_id,
+          submittedBy: data.submitted_by,
+          approvalStatus: data.approval_status,
+          approvedBy: data.approved_by,
+          approvedAt: data.approved_at,
+          disapprovedBy: data.disapproved_by,
+          disapprovedAt: data.disapproved_at,
+          expectedDate: data.expected_date,
+          createdAt: data.created_at
+        } : t
+      ));
     } catch (error) {
       console.error('Error updating transaction:', error);
       toast.error(`Failed to update transaction: ${error.message}`);
@@ -333,6 +377,7 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  // Category functions
   const addCategory = async (category) => {
     try {
       const { data, error } = await supabase
@@ -370,11 +415,13 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      setCategories(prev => prev.map(cat => cat.id === id ? {
-        id: data.id,
-        name: data.name,
-        type: data.type
-      } : cat));
+      setCategories(prev => prev.map(cat => 
+        cat.id === id ? {
+          id: data.id,
+          name: data.name,
+          type: data.type
+        } : cat
+      ));
 
       toast.success('Category updated successfully!');
     } catch (error) {
@@ -412,12 +459,18 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  // Item functions
   const addItem = async (item) => {
     try {
+      const categoryId = parseInt(item.categoryId);
+      if (isNaN(categoryId)) {
+        throw new Error('Invalid category selected');
+      }
+
       const { data, error } = await supabase
         .from('items_stf2024')
         .insert([{
-          category_id: item.categoryId,
+          category_id: categoryId,
           name: item.name
         }])
         .select()
@@ -443,7 +496,13 @@ export const DataProvider = ({ children }) => {
     try {
       const dbUpdates = {};
       if (updates.name) dbUpdates.name = updates.name;
-      if (updates.categoryId) dbUpdates.category_id = updates.categoryId;
+      if (updates.categoryId) {
+        const categoryId = parseInt(updates.categoryId);
+        if (isNaN(categoryId)) {
+          throw new Error('Invalid category selected');
+        }
+        dbUpdates.category_id = categoryId;
+      }
 
       const { data, error } = await supabase
         .from('items_stf2024')
@@ -454,11 +513,13 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      setItems(prev => prev.map(item => item.id === id ? {
-        id: data.id,
-        name: data.name,
-        categoryId: data.category_id
-      } : item));
+      setItems(prev => prev.map(item => 
+        item.id === id ? {
+          id: data.id,
+          name: data.name,
+          categoryId: data.category_id
+        } : item
+      ));
 
       toast.success('Item updated successfully!');
     } catch (error) {
@@ -490,6 +551,7 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  // Platform button functions
   const addPlatformButton = async (button) => {
     try {
       const { data, error } = await supabase

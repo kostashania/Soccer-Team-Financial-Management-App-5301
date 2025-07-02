@@ -40,10 +40,13 @@ const CreateTransaction = () => {
   // Filter categories based on selected type
   const filteredCategories = categories.filter(cat => cat.type === watchedType);
 
-  // Filter items based on selected category - compare UUID strings directly
+  // Filter items based on selected category - ensure proper comparison
   const filteredItems = items.filter(item => {
-    console.log('Filtering items. Item categoryId:', item.categoryId, 'Selected categoryId:', watchedCategory, 'Match:', item.categoryId === watchedCategory);
-    return item.categoryId === watchedCategory; // Direct string comparison for UUIDs
+    const selectedCategoryId = watchedCategory ? parseInt(watchedCategory) : null;
+    const itemCategoryId = typeof item.categoryId === 'string' ? parseInt(item.categoryId) : item.categoryId;
+    
+    console.log('Filtering items. Item categoryId:', itemCategoryId, 'Selected categoryId:', selectedCategoryId, 'Match:', itemCategoryId === selectedCategoryId);
+    return selectedCategoryId && itemCategoryId === selectedCategoryId;
   });
 
   console.log('All categories:', categories);
@@ -63,12 +66,24 @@ const CreateTransaction = () => {
   const onSubmit = async (data) => {
     if (isSubmitting) return;
 
+    // Validate that category and item are selected
+    if (!data.categoryId) {
+      toast.error('Please select a category');
+      return;
+    }
+
+    if (!data.itemId) {
+      toast.error('Please select an item');
+      return;
+    }
+
     setIsSubmitting(true);
+
     try {
       const transactionData = {
         type: data.type,
-        categoryId: data.categoryId, // Keep as UUID string
-        itemId: data.itemId, // Keep as UUID string
+        categoryId: parseInt(data.categoryId), // Ensure it's an integer
+        itemId: parseInt(data.itemId), // Ensure it's an integer
         amount: parseFloat(data.amount),
         description: data.description,
         status: data.status,
@@ -85,6 +100,7 @@ const CreateTransaction = () => {
 
       console.log('Submitting transaction:', transactionData);
       await addTransaction(transactionData);
+      
       reset();
       setSelectedFiles([]);
     } catch (error) {
@@ -303,6 +319,7 @@ const CreateTransaction = () => {
                   <SafeIcon icon={FiUpload} className="w-8 h-8 text-gray-400" />
                   <span className="text-sm text-gray-600">Click to upload files</span>
                 </label>
+
                 {selectedFiles.length > 0 && (
                   <div className="mt-4 space-y-2">
                     {selectedFiles.map((file, index) => (
