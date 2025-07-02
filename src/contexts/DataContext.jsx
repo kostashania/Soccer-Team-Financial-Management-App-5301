@@ -61,7 +61,7 @@ export const DataProvider = ({ children }) => {
           setCategories([]);
         } else {
           const mappedCategories = categoriesData?.map(cat => ({
-            id: cat.id,
+            id: parseInt(cat.id), // Ensure ID is integer
             name: cat.name,
             type: cat.type
           })) || [];
@@ -86,9 +86,9 @@ export const DataProvider = ({ children }) => {
           setItems([]);
         } else {
           const mappedItems = itemsData?.map(item => ({
-            id: item.id,
+            id: parseInt(item.id), // Ensure ID is integer
             name: item.name,
-            categoryId: item.category_id
+            categoryId: parseInt(item.category_id) // Ensure categoryId is integer
           })) || [];
           console.log('Items loaded:', mappedItems);
           setItems(mappedItems);
@@ -113,8 +113,8 @@ export const DataProvider = ({ children }) => {
           const mappedTransactions = transactionsData?.map(trans => ({
             ...trans,
             id: trans.id,
-            categoryId: trans.category_id,
-            itemId: trans.item_id,
+            categoryId: parseInt(trans.category_id), // Ensure categoryId is integer
+            itemId: parseInt(trans.item_id), // Ensure itemId is integer
             submittedBy: trans.submitted_by,
             approvalStatus: trans.approval_status,
             approvedBy: trans.approved_by,
@@ -300,6 +300,15 @@ export const DataProvider = ({ children }) => {
       const categoryId = parseInt(transaction.categoryId);
       const itemId = parseInt(transaction.itemId);
 
+      console.log('Transaction validation:', {
+        originalCategoryId: transaction.categoryId,
+        originalItemId: transaction.itemId,
+        parsedCategoryId: categoryId,
+        parsedItemId: itemId,
+        isNaNCategory: isNaN(categoryId),
+        isNaNItem: isNaN(itemId)
+      });
+
       if (isNaN(categoryId) || isNaN(itemId)) {
         throw new Error('Invalid category or item selected');
       }
@@ -308,15 +317,22 @@ export const DataProvider = ({ children }) => {
       const categoryExists = categories.find(c => c.id === categoryId);
       const itemExists = items.find(i => i.id === itemId);
 
+      console.log('Existence check:', {
+        categoryId,
+        itemId,
+        categoryExists,
+        itemExists,
+        allCategories: categories.map(c => ({ id: c.id, name: c.name })),
+        allItems: items.map(i => ({ id: i.id, name: i.name, categoryId: i.categoryId }))
+      });
+
       if (!categoryExists) {
-        console.log('Available categories:', categories);
-        console.log('Looking for category ID:', categoryId);
+        console.error('Category not found. Available categories:', categories);
         throw new Error('Selected category does not exist');
       }
 
       if (!itemExists) {
-        console.log('Available items:', items);
-        console.log('Looking for item ID:', itemId);
+        console.error('Item not found. Available items:', items);
         throw new Error('Selected item does not exist');
       }
 
@@ -351,8 +367,8 @@ export const DataProvider = ({ children }) => {
       const newTransaction = {
         ...data,
         id: data.id,
-        categoryId: data.category_id,
-        itemId: data.item_id,
+        categoryId: parseInt(data.category_id),
+        itemId: parseInt(data.item_id),
         submittedBy: data.submitted_by,
         approvalStatus: data.approval_status,
         approvedBy: data.approved_by,
@@ -393,8 +409,8 @@ export const DataProvider = ({ children }) => {
         t.id === id ? {
           ...t,
           ...updates,
-          categoryId: data.category_id,
-          itemId: data.item_id,
+          categoryId: parseInt(data.category_id),
+          itemId: parseInt(data.item_id),
           submittedBy: data.submitted_by,
           approvalStatus: data.approval_status,
           approvedBy: data.approved_by,
@@ -431,6 +447,8 @@ export const DataProvider = ({ children }) => {
   // Category functions
   const addCategory = async (category) => {
     try {
+      console.log('Adding category:', category);
+      
       const { data, error } = await supabase
         .from('categories_stf2024')
         .insert([{
@@ -440,10 +458,15 @@ export const DataProvider = ({ children }) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Category insert error:', error);
+        throw error;
+      }
+
+      console.log('Category added successfully:', data);
 
       const newCategory = {
-        id: data.id,
+        id: parseInt(data.id), // Ensure ID is integer
         name: data.name,
         type: data.type
       };
@@ -469,7 +492,7 @@ export const DataProvider = ({ children }) => {
 
       setCategories(prev => prev.map(cat => 
         cat.id === id ? {
-          id: data.id,
+          id: parseInt(data.id),
           name: data.name,
           type: data.type
         } : cat
@@ -514,26 +537,50 @@ export const DataProvider = ({ children }) => {
   // Item functions
   const addItem = async (item) => {
     try {
+      console.log('Adding item:', item);
+      console.log('Available categories:', categories);
+
+      // Validate categoryId
       const categoryId = parseInt(item.categoryId);
-      if (isNaN(categoryId)) {
-        throw new Error('Invalid category selected');
+      console.log('Parsed categoryId:', categoryId, 'isNaN:', isNaN(categoryId));
+
+      if (isNaN(categoryId) || !categoryId) {
+        throw new Error('Please select a valid category');
       }
+
+      // Check if category exists
+      const categoryExists = categories.find(c => c.id === categoryId);
+      console.log('Category exists check:', categoryExists);
+
+      if (!categoryExists) {
+        console.error('Category not found. Available categories:', categories.map(c => ({ id: c.id, name: c.name })));
+        throw new Error('Selected category does not exist. Please refresh the page and try again.');
+      }
+
+      const insertData = {
+        category_id: categoryId,
+        name: item.name
+      };
+
+      console.log('Inserting item with data:', insertData);
 
       const { data, error } = await supabase
         .from('items_stf2024')
-        .insert([{
-          category_id: categoryId,
-          name: item.name
-        }])
+        .insert([insertData])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Item insert error:', error);
+        throw error;
+      }
+
+      console.log('Item added successfully:', data);
 
       const newItem = {
-        id: data.id,
+        id: parseInt(data.id),
         name: data.name,
-        categoryId: data.category_id
+        categoryId: parseInt(data.category_id)
       };
 
       setItems(prev => [...prev, newItem]);
@@ -567,9 +614,9 @@ export const DataProvider = ({ children }) => {
 
       setItems(prev => prev.map(item => 
         item.id === id ? {
-          id: data.id,
+          id: parseInt(data.id),
           name: data.name,
-          categoryId: data.category_id
+          categoryId: parseInt(data.category_id)
         } : item
       ));
 

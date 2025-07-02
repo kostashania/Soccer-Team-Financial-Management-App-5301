@@ -22,6 +22,7 @@ const CreateTransaction = () => {
     handleSubmit,
     watch,
     reset,
+    setValue,
     formState: { errors }
   } = useForm({
     defaultValues: {
@@ -29,7 +30,9 @@ const CreateTransaction = () => {
       type: 'expense',
       status: 'paid',
       official: 'true',
-      count: 'true'
+      count: 'true',
+      categoryId: '',
+      itemId: ''
     }
   });
 
@@ -43,16 +46,22 @@ const CreateTransaction = () => {
   // Filter items based on selected category - ensure proper comparison
   const filteredItems = items.filter(item => {
     const selectedCategoryId = watchedCategory ? parseInt(watchedCategory) : null;
-    const itemCategoryId = typeof item.categoryId === 'string' ? parseInt(item.categoryId) : item.categoryId;
-    
-    console.log('Filtering items. Item categoryId:', itemCategoryId, 'Selected categoryId:', selectedCategoryId, 'Match:', itemCategoryId === selectedCategoryId);
-    return selectedCategoryId && itemCategoryId === selectedCategoryId;
+    return selectedCategoryId && item.categoryId === selectedCategoryId;
   });
 
-  console.log('All categories:', categories);
-  console.log('All items:', items);
-  console.log('Filtered categories for type', watchedType, ':', filteredCategories);
-  console.log('Filtered items for category', watchedCategory, ':', filteredItems);
+  // Reset itemId when category changes
+  React.useEffect(() => {
+    setValue('itemId', '');
+  }, [watchedCategory, setValue]);
+
+  console.log('Debug info:', {
+    watchedType,
+    watchedCategory: watchedCategory ? parseInt(watchedCategory) : null,
+    allCategories: categories.map(c => ({ id: c.id, name: c.name, type: c.type })),
+    filteredCategories: filteredCategories.map(c => ({ id: c.id, name: c.name })),
+    allItems: items.map(i => ({ id: i.id, name: i.name, categoryId: i.categoryId })),
+    filteredItems: filteredItems.map(i => ({ id: i.id, name: i.name }))
+  });
 
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
@@ -66,13 +75,15 @@ const CreateTransaction = () => {
   const onSubmit = async (data) => {
     if (isSubmitting) return;
 
+    console.log('Form submission data:', data);
+
     // Validate that category and item are selected
-    if (!data.categoryId) {
+    if (!data.categoryId || data.categoryId === '') {
       toast.error('Please select a category');
       return;
     }
 
-    if (!data.itemId) {
+    if (!data.itemId || data.itemId === '') {
       toast.error('Please select an item');
       return;
     }
@@ -119,8 +130,8 @@ const CreateTransaction = () => {
     try {
       const transactionData = {
         type: data.type,
-        categoryId: categoryId, // Ensure it's an integer
-        itemId: itemId, // Ensure it's an integer
+        categoryId: categoryId,
+        itemId: itemId,
         amount: parseFloat(data.amount),
         description: data.description,
         status: data.status,
@@ -138,7 +149,15 @@ const CreateTransaction = () => {
       console.log('Submitting transaction:', transactionData);
       await addTransaction(transactionData);
       
-      reset();
+      reset({
+        submittedBy: user?.name,
+        type: 'expense',
+        status: 'paid',
+        official: 'true',
+        count: 'true',
+        categoryId: '',
+        itemId: ''
+      });
       setSelectedFiles([]);
     } catch (error) {
       console.error('Error creating transaction:', error);
@@ -149,7 +168,7 @@ const CreateTransaction = () => {
   };
 
   // Show loading if categories or items are not loaded yet
-  if (categories.length === 0 || items.length === 0) {
+  if (categories.length === 0) {
     return (
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-center py-8">
@@ -219,6 +238,9 @@ const CreateTransaction = () => {
               {filteredCategories.length === 0 && watchedType && (
                 <p className="mt-1 text-sm text-yellow-600">No categories found for {watchedType} type</p>
               )}
+              {filteredCategories.length > 0 && (
+                <p className="mt-1 text-sm text-green-600">{filteredCategories.length} categories available for {watchedType}</p>
+              )}
             </div>
 
             {/* Item */}
@@ -239,8 +261,14 @@ const CreateTransaction = () => {
                 ))}
               </select>
               {errors.itemId && <p className="mt-1 text-sm text-red-600">{errors.itemId.message}</p>}
+              {!watchedCategory && (
+                <p className="mt-1 text-sm text-gray-500">Please select a category first</p>
+              )}
               {watchedCategory && filteredItems.length === 0 && (
                 <p className="mt-1 text-sm text-yellow-600">No items found for this category</p>
+              )}
+              {watchedCategory && filteredItems.length > 0 && (
+                <p className="mt-1 text-sm text-green-600">{filteredItems.length} items available</p>
               )}
             </div>
 
@@ -389,6 +417,17 @@ const CreateTransaction = () => {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Debug Information */}
+            <div className="bg-gray-50 p-4 rounded-lg text-xs text-gray-600">
+              <p><strong>Debug:</strong></p>
+              <p>Categories loaded: {categories.length}</p>
+              <p>Items loaded: {items.length}</p>
+              <p>Selected type: {watchedType}</p>
+              <p>Selected category: {watchedCategory}</p>
+              <p>Filtered categories: {filteredCategories.length}</p>
+              <p>Filtered items: {filteredItems.length}</p>
             </div>
 
             {/* Submit Button */}
