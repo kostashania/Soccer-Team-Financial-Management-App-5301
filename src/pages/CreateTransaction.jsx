@@ -43,9 +43,9 @@ const CreateTransaction = () => {
   // Filter categories based on selected type
   const filteredCategories = categories.filter(cat => cat.type === watchedType);
 
-  // Filter items based on selected category - ensure proper comparison
+  // Filter items based on selected category - use string comparison for UUIDs
   const filteredItems = items.filter(item => {
-    const selectedCategoryId = watchedCategory ? parseInt(watchedCategory) : null;
+    const selectedCategoryId = watchedCategory;
     return selectedCategoryId && item.categoryId === selectedCategoryId;
   });
 
@@ -66,7 +66,7 @@ const CreateTransaction = () => {
   const onSubmit = async (data) => {
     if (isSubmitting) return;
 
-    console.log('=== TRANSACTION SUBMISSION START ===');
+    console.log('===TRANSACTION SUBMISSION START===');
     console.log('Form submission data:', data);
 
     // Validate that category and item are selected
@@ -91,18 +91,18 @@ const CreateTransaction = () => {
       return;
     }
 
-    // Validate that the selected category and item exist
-    const categoryId = parseInt(data.categoryId);
-    const itemId = parseInt(data.itemId);
-    
+    // Keep categoryId and itemId as strings (UUIDs)
+    const categoryId = data.categoryId;
+    const itemId = data.itemId;
+
     const categoryExists = categories.find(c => c.id === categoryId);
     const itemExists = items.find(i => i.id === itemId);
 
     console.log('Validation details:', {
       formCategoryId: data.categoryId,
       formItemId: data.itemId,
-      parsedCategoryId: categoryId,
-      parsedItemId: itemId,
+      categoryId: categoryId,
+      itemId: itemId,
       categoryExists: categoryExists,
       itemExists: itemExists,
       allCategories: categories.map(c => ({ id: c.id, name: c.name, type: c.type })),
@@ -128,8 +128,8 @@ const CreateTransaction = () => {
     try {
       const transactionData = {
         type: data.type,
-        categoryId: categoryId,
-        itemId: itemId,
+        categoryId: categoryId, // Keep as UUID string
+        itemId: itemId, // Keep as UUID string
         amount: parseFloat(data.amount),
         description: data.description,
         status: data.status,
@@ -146,16 +146,15 @@ const CreateTransaction = () => {
 
       console.log('Calling addTransaction with data:', transactionData);
       console.log('addTransaction function:', typeof addTransaction);
-      
+
       // Ensure we're calling the transaction function, not item function
       if (typeof addTransaction !== 'function') {
         throw new Error('addTransaction function is not available');
       }
 
       await addTransaction(transactionData);
-      
       console.log('Transaction created successfully!');
-      
+
       reset({
         submittedBy: user?.name,
         type: 'expense',
@@ -166,15 +165,13 @@ const CreateTransaction = () => {
         itemId: ''
       });
       setSelectedFiles([]);
-      
       toast.success('Transaction created successfully!');
-      
     } catch (error) {
       console.error('Error creating transaction:', error);
       toast.error(`Failed to create transaction: ${error.message}`);
     } finally {
       setIsSubmitting(false);
-      console.log('=== TRANSACTION SUBMISSION END ===');
+      console.log('===TRANSACTION SUBMISSION END===');
     }
   };
 
@@ -410,7 +407,6 @@ const CreateTransaction = () => {
                   <SafeIcon icon={FiUpload} className="w-8 h-8 text-gray-400" />
                   <span className="text-sm text-gray-600">Click to upload files</span>
                 </label>
-
                 {selectedFiles.length > 0 && (
                   <div className="mt-4 space-y-2">
                     {selectedFiles.map((file, index) => (
@@ -436,10 +432,13 @@ const CreateTransaction = () => {
               <p>Categories loaded: {categories.length}</p>
               <p>Items loaded: {items.length}</p>
               <p>Selected type: {watchedType}</p>
-              <p>Selected category: {watchedCategory} (parsed: {watchedCategory ? parseInt(watchedCategory) : 'none'})</p>
+              <p>Selected category: {watchedCategory} (type: {typeof watchedCategory})</p>
               <p>Filtered categories: {filteredCategories.length}</p>
               <p>Filtered items: {filteredItems.length}</p>
               <p>addTransaction function available: {typeof addTransaction === 'function' ? 'YES' : 'NO'}</p>
+              {categories.length > 0 && (
+                <p>Sample category ID: "{categories[0].id}" (type: {typeof categories[0].id})</p>
+              )}
             </div>
 
             {/* Submit Button */}

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import supabase from '../lib/supabase';
+import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
 
 const BrandingContext = createContext();
@@ -13,6 +14,7 @@ export const useBranding = () => {
 };
 
 export const BrandingProvider = ({ children }) => {
+  const { user, tenant } = useAuth();
   const [branding, setBranding] = useState({
     appTitle: 'Soccer Team Finance',
     appSubtitle: 'Financial Management System',
@@ -21,47 +23,79 @@ export const BrandingProvider = ({ children }) => {
   });
   const [loading, setLoading] = useState(true);
 
-  // Fetch branding settings
+  // Fetch branding settings with tenant isolation
   const fetchBranding = async () => {
+    if (!user || user.role === 'superadmin') {
+      setLoading(false);
+      return;
+    }
+
+    if (!tenant) {
+      console.log('No tenant information for branding');
+      setBranding({
+        appTitle: 'Soccer Team Finance',
+        appSubtitle: 'Financial Management System',
+        logoUrl: null,
+        logoFileName: null
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      console.log('Fetching branding settings...');
+      console.log('Fetching branding settings for tenant:', tenant.id);
 
-      // Try to get existing settings
+      // Add tenant_id column to app_settings table if it doesn't exist
+      await supabase.rpc('add_tenant_column_if_not_exists', {
+        table_name: 'app_settings_stf2024',
+        tenant_id: tenant.id
+      }).catch(() => {
+        // Column might already exist, continue
+      });
+
+      // Try to get existing settings for this tenant
       const { data, error } = await supabase
         .from('app_settings_stf2024')
         .select('*')
+        .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false })
         .limit(1);
 
-      if (error) {
+      if (error && error.details?.includes('tenant_id')) {
+        // If tenant_id column doesn't exist, get all settings
+        console.log('Tenant column not found, using default branding');
+        setBranding({
+          appTitle: tenant.name || 'Soccer Team Finance',
+          appSubtitle: 'Financial Management System',
+          logoUrl: null,
+          logoFileName: null
+        });
+      } else if (error) {
         console.error('Error fetching branding:', error);
         throw error;
-      }
-
-      console.log('Branding data fetched:', data);
-
-      if (data && data.length > 0) {
-        const settings = data[0];
-        const newBranding = {
-          appTitle: settings.app_title || 'Soccer Team Finance',
-          appSubtitle: settings.app_subtitle || 'Financial Management System',
-          logoUrl: settings.logo_url,
-          logoFileName: settings.logo_file_name
-        };
-        
-        console.log('Setting branding to:', newBranding);
-        setBranding(newBranding);
       } else {
-        console.log('No branding data found, creating default...');
-        // Create default settings
-        await createDefaultSettings();
+        console.log('Branding data fetched:', data);
+        if (data && data.length > 0) {
+          const settings = data[0];
+          const newBranding = {
+            appTitle: settings.app_title || tenant.name || 'Soccer Team Finance',
+            appSubtitle: settings.app_subtitle || 'Financial Management System',
+            logoUrl: settings.logo_url,
+            logoFileName: settings.logo_file_name
+          };
+          console.log('Setting branding to:', newBranding);
+          setBranding(newBranding);
+        } else {
+          console.log('No branding data found, creating default...');
+          await createDefaultSettings();
+        }
       }
     } catch (error) {
       console.error('Error in fetchBranding:', error);
-      // Use defaults on error
+      // Use tenant-specific defaults on error
       setBranding({
-        appTitle: 'Soccer Team Finance',
+        appTitle: tenant?.name || 'Soccer Team Finance',
         appSubtitle: 'Financial Management System',
         logoUrl: null,
         logoFileName: null
@@ -71,22 +105,35 @@ export const BrandingProvider = ({ children }) => {
     }
   };
 
-  // Create default settings
+  // Create default settings with tenant-specific data
   const createDefaultSettings = async () => {
+    if (!tenant) return;
+
     try {
-      console.log('Creating default settings...');
+      console.log('Creating default settings for tenant:', tenant.id);
+
       const { data, error } = await supabase
         .from('app_settings_stf2024')
         .insert({
-          app_title: 'Soccer Team Finance',
+          app_title: tenant.name || 'Soccer Team Finance',
           app_subtitle: 'Financial Management System',
           logo_url: null,
-          logo_file_name: null
+          logo_file_name: null,
+          tenant_id: tenant.id
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.log('Error creating default settings:', error);
+        setBranding({
+          appTitle: tenant.name || 'Soccer Team Finance',
+          appSubtitle: 'Financial Management System',
+          logoUrl: null,
+          logoFileName: null
+        });
+        return;
+      }
 
       console.log('Default settings created:', data);
       setBranding({
@@ -100,20 +147,22 @@ export const BrandingProvider = ({ children }) => {
     }
   };
 
-  // Update branding settings
+  // Update branding settings with tenant isolation
   const updateBranding = async (updates) => {
-    try {
-      console.log('Updating branding with:', updates);
+    if (!tenant) return { success: false, error: 'No tenant information' };
 
-      // Get the current record ID
+    try {
+      console.log('Updating branding for tenant:', tenant.id, 'with:', updates);
+
+      // Get the current record ID for this tenant
       const { data: existingData } = await supabase
         .from('app_settings_stf2024')
         .select('id')
+        .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false })
         .limit(1);
 
       let result;
-      
       if (existingData && existingData.length > 0) {
         // Update existing record
         const { data, error } = await supabase
@@ -126,6 +175,7 @@ export const BrandingProvider = ({ children }) => {
             updated_at: new Date().toISOString()
           })
           .eq('id', existingData[0].id)
+          .eq('tenant_id', tenant.id)
           .select()
           .single();
 
@@ -139,7 +189,8 @@ export const BrandingProvider = ({ children }) => {
             app_title: updates.appTitle || branding.appTitle,
             app_subtitle: updates.appSubtitle || branding.appSubtitle,
             logo_url: updates.logoUrl || branding.logoUrl,
-            logo_file_name: updates.logoFileName || branding.logoFileName
+            logo_file_name: updates.logoFileName || branding.logoFileName,
+            tenant_id: tenant.id
           })
           .select()
           .single();
@@ -149,7 +200,6 @@ export const BrandingProvider = ({ children }) => {
       }
 
       console.log('Branding update result:', result);
-
       // Update local state
       const newBranding = {
         appTitle: result.app_title,
@@ -157,7 +207,6 @@ export const BrandingProvider = ({ children }) => {
         logoUrl: result.logo_url,
         logoFileName: result.logo_file_name
       };
-
       console.log('Setting new branding state:', newBranding);
       setBranding(newBranding);
 
@@ -170,10 +219,12 @@ export const BrandingProvider = ({ children }) => {
     }
   };
 
-  // Upload logo file
+  // Upload logo file with tenant-specific storage
   const uploadLogo = async (file) => {
+    if (!tenant) return { success: false, error: 'No tenant information' };
+
     try {
-      console.log('Starting logo upload...', file);
+      console.log('Starting logo upload for tenant:', tenant.name);
 
       // Validate file type
       if (!file.type.startsWith('image/')) {
@@ -185,10 +236,9 @@ export const BrandingProvider = ({ children }) => {
         throw new Error('File size must be less than 5MB');
       }
 
-      // Create unique filename
+      // Create tenant-specific filename
       const fileExt = file.name.split('.').pop();
-      const fileName = `logo_${Date.now()}.${fileExt}`;
-
+      const fileName = `tenant_${tenant.id}/logo_${Date.now()}.${fileExt}`;
       console.log('Uploading to storage with filename:', fileName);
 
       // Upload to Supabase storage
@@ -224,7 +274,6 @@ export const BrandingProvider = ({ children }) => {
         toast.success('Logo uploaded successfully!');
         return { success: true, logoUrl };
       }
-
       return result;
     } catch (error) {
       console.error('Error uploading logo:', error);
@@ -233,8 +282,10 @@ export const BrandingProvider = ({ children }) => {
     }
   };
 
-  // Remove logo
+  // Remove logo with tenant isolation
   const removeLogo = async () => {
+    if (!tenant) return { success: false, error: 'No tenant information' };
+
     try {
       console.log('Removing logo...', branding.logoFileName);
 
@@ -259,7 +310,6 @@ export const BrandingProvider = ({ children }) => {
       if (result.success) {
         toast.success('Logo removed successfully!');
       }
-
       return result;
     } catch (error) {
       console.error('Error removing logo:', error);
@@ -269,8 +319,20 @@ export const BrandingProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    fetchBranding();
-  }, []);
+    if (user && tenant) {
+      console.log('Fetching branding for tenant:', tenant.name);
+      fetchBranding();
+    } else if (user && user.role === 'superadmin') {
+      // Superadmin uses default branding
+      setBranding({
+        appTitle: 'Soccer Team Finance',
+        appSubtitle: 'Multi-Tenant Management System',
+        logoUrl: null,
+        logoFileName: null
+      });
+      setLoading(false);
+    }
+  }, [user, tenant]);
 
   // Debug: Log branding state changes
   useEffect(() => {

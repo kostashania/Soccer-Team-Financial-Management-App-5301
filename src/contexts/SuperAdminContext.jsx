@@ -23,19 +23,31 @@ export const SuperAdminProvider = ({ children }) => {
   // Check if user is superadmin
   const isSuperAdmin = user?.role === 'superadmin';
 
-  // Fetch all tenants
+  // Fetch all tenants with user counts
   const fetchTenants = async () => {
     if (!isSuperAdmin) return;
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Fetch tenants with user counts
+      const { data: tenantsData, error: tenantsError } = await supabase
         .from('tenants')
-        .select('*')
+        .select(`
+          *,
+          users:users_central(count)
+        `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setTenants(data || []);
+      if (tenantsError) throw tenantsError;
+
+      // Transform the data to include user count
+      const tenantsWithUserCount = tenantsData?.map(tenant => ({
+        ...tenant,
+        userCount: tenant.users?.[0]?.count || 0
+      })) || [];
+
+      setTenants(tenantsWithUserCount);
     } catch (error) {
       console.error('Error fetching tenants:', error);
       toast.error('Failed to fetch tenants');
@@ -63,20 +75,27 @@ export const SuperAdminProvider = ({ children }) => {
     }
   };
 
-  // Create new tenant
+  // Create new tenant with user
   const createTenant = async (tenantData) => {
     if (!isSuperAdmin) return { success: false, error: 'Access denied' };
 
     try {
-      const { name, domain, plan = 'basic', subscriptionMonths = 12 } = tenantData;
-      
+      const { name, domain, plan = 'basic', subscriptionMonths = 12, adminEmail, adminPassword } = tenantData;
+
+      // Validate required fields
+      if (!adminEmail || !adminPassword) {
+        throw new Error('Admin email and password are required');
+      }
+
       // Generate schema name
       const schemaName = `tenant_${domain.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`;
-      
+
       // Calculate subscription dates
       const startDate = new Date();
       const endDate = new Date();
       endDate.setMonth(endDate.getMonth() + subscriptionMonths);
+
+      console.log('Creating tenant with data:', { name, domain, adminEmail });
 
       // Create tenant record
       const { data: tenant, error: tenantError } = await supabase
@@ -93,38 +112,66 @@ export const SuperAdminProvider = ({ children }) => {
         .select()
         .single();
 
-      if (tenantError) throw tenantError;
+      if (tenantError) {
+        console.error('Tenant creation error:', tenantError);
+        throw tenantError;
+      }
+
+      console.log('Tenant created:', tenant);
+
+      // Create admin user for the tenant
+      const { data: userData, error: userError } = await supabase
+        .from('users_central')
+        .insert({
+          tenant_id: tenant.id,
+          email: adminEmail,
+          name: `${name} Administrator`,
+          role: 'admin',
+          password: adminPassword,
+          active: true
+        })
+        .select()
+        .single();
+
+      if (userError) {
+        console.error('User creation error:', userError);
+        // If user creation fails, we should clean up the tenant
+        await supabase.from('tenants').delete().eq('id', tenant.id);
+        throw new Error(`Failed to create admin user: ${userError.message}`);
+      }
+
+      console.log('User created:', userData);
 
       // Create tenant schema and duplicate template data
       const schemaResult = await createTenantSchema(schemaName);
       if (!schemaResult.success) {
-        throw new Error('Failed to create tenant schema');
+        console.warn('Schema creation warning:', schemaResult.error);
+        // Don't fail the entire process for schema creation
       }
 
       const duplicateResult = await duplicateTemplateToTenant(schemaName, domain);
       if (!duplicateResult.success) {
-        throw new Error('Failed to duplicate template data');
+        console.warn('Template duplication warning:', duplicateResult.error);
+        // Don't fail the entire process for template duplication
       }
-
-      // Create admin user for the tenant
-      const { error: userError } = await supabase
-        .from('users_central')
-        .insert({
-          tenant_id: tenant.id,
-          email: `admin@${domain}`,
-          name: `${name} Administrator`,
-          role: 'admin',
-          password: tenantData.adminPassword || 'password',
-          active: true
-        });
-
-      if (userError) throw userError;
 
       // Create default reminder settings
       const reminderTemplates = [
-        { days_before: 15, subject: 'Υπενθύμιση Ανανέωσης - 15 ημέρες', content: 'Η συνδρομή σας λήγει σε 15 ημέρες.' },
-        { days_before: 10, subject: 'Υπενθύμιση Ανανέωσης - 10 ημέρες', content: 'Η συνδρομή σας λήγει σε 10 ημέρες.' },
-        { days_before: 1, subject: 'Επείγουσα Υπενθύμιση - 1 ημέρα', content: 'Η συνδρομή σας λήγει αύριο!' }
+        {
+          days_before: 15,
+          subject: 'Υπενθύμιση Ανανέωσης - 15 ημέρες',
+          content: 'Η συνδρομή σας λήγει σε 15 ημέρες.'
+        },
+        {
+          days_before: 10,
+          subject: 'Υπενθύμιση Ανανέωσης - 10 ημέρες',
+          content: 'Η συνδρομή σας λήγει σε 10 ημέρες.'
+        },
+        {
+          days_before: 1,
+          subject: 'Επείγουσα Υπενθύμιση - 1 ημέρα',
+          content: 'Η συνδρομή σας λήγει αύριο!'
+        }
       ];
 
       for (const reminder of reminderTemplates) {
@@ -140,11 +187,41 @@ export const SuperAdminProvider = ({ children }) => {
       }
 
       await fetchTenants();
-      toast.success(`Tenant "${name}" created successfully!`);
-      return { success: true, tenant };
+      toast.success(`Tenant "${name}" created successfully with admin user!`);
+      return { success: true, tenant, user: userData };
     } catch (error) {
       console.error('Error creating tenant:', error);
       toast.error(`Failed to create tenant: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Create user for existing tenant
+  const createTenantUser = async (tenantId, userData) => {
+    if (!isSuperAdmin) return { success: false, error: 'Access denied' };
+
+    try {
+      const { data, error } = await supabase
+        .from('users_central')
+        .insert({
+          tenant_id: tenantId,
+          email: userData.email,
+          name: userData.name,
+          role: userData.role || 'admin',
+          password: userData.password || 'password',
+          active: true
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await fetchTenants();
+      toast.success('User created successfully!');
+      return { success: true, user: data };
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast.error(`Failed to create user: ${error.message}`);
       return { success: false, error: error.message };
     }
   };
@@ -193,13 +270,14 @@ export const SuperAdminProvider = ({ children }) => {
         name: newName,
         domain: newDomain,
         plan: sourceTenant.plan,
-        subscriptionMonths: 12
+        subscriptionMonths: 12,
+        adminEmail: `admin@${newDomain}`,
+        adminPassword: 'password'
       });
 
       if (result.success) {
         toast.success(`Tenant duplicated successfully as "${newName}"`);
       }
-
       return result;
     } catch (error) {
       console.error('Error duplicating tenant:', error);
@@ -214,7 +292,6 @@ export const SuperAdminProvider = ({ children }) => {
 
     try {
       let result;
-      
       if (globalSettings?.id) {
         // Update existing
         const { data, error } = await supabase
@@ -264,6 +341,7 @@ export const SuperAdminProvider = ({ children }) => {
     reminderSettings,
     loading,
     createTenant,
+    createTenantUser,
     updateTenant,
     duplicateTenant,
     updateGlobalSettings,

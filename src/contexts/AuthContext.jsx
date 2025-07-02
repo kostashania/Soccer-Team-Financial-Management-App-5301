@@ -24,10 +24,17 @@ export const AuthProvider = ({ children }) => {
     
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
-        if (storedTenant) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        
+        if (storedTenant && parsedUser.role !== 'superadmin') {
           setTenant(JSON.parse(storedTenant));
         }
+        
+        console.log('Restored user session:', { 
+          user: parsedUser.name, 
+          tenant: storedTenant ? JSON.parse(storedTenant).name : 'none' 
+        });
       } catch (error) {
         console.error('Error parsing stored user:', error);
         localStorage.removeItem('soccerTeamUser');
@@ -68,7 +75,11 @@ export const AuthProvider = ({ children }) => {
 
       // Check password
       const storedPassword = userData.password || 'password';
-      console.log('Password check:', { provided: password, stored: storedPassword, match: password === storedPassword });
+      console.log('Password check:', { 
+        provided: password, 
+        stored: storedPassword, 
+        match: password === storedPassword 
+      });
 
       if (password === storedPassword) {
         const userObj = {
@@ -89,7 +100,7 @@ export const AuthProvider = ({ children }) => {
             schemaName: userData.tenant.schema_name,
             active: userData.tenant.active
           };
-          
+
           // Check if tenant is active
           if (!userData.tenant.active) {
             return { success: false, error: 'Your organization account is inactive. Please contact support.' };
@@ -100,6 +111,12 @@ export const AuthProvider = ({ children }) => {
           if (endDate < new Date()) {
             return { success: false, error: 'Your subscription has expired. Please contact support to renew.' };
           }
+
+          console.log('User logged in to tenant:', {
+            userName: userData.name,
+            tenantName: tenantObj.name,
+            tenantId: tenantObj.id
+          });
         }
 
         setUser(userObj);
@@ -108,6 +125,8 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('soccerTeamUser', JSON.stringify(userObj));
         if (tenantObj) {
           localStorage.setItem('soccerTeamTenant', JSON.stringify(tenantObj));
+        } else {
+          localStorage.removeItem('soccerTeamTenant');
         }
 
         toast.success(`Welcome back, ${userData.name}!`);
