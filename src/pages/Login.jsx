@@ -9,7 +9,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useBranding } from '../contexts/BrandingContext';
 import toast from 'react-hot-toast';
 
-const { FiMail, FiLock, FiEye, FiEyeOff, FiGlobe } = FiIcons;
+const { FiMail, FiLock, FiEye, FiEyeOff, FiGlobe, FiArrowLeft } = FiIcons;
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -21,12 +21,16 @@ const Login = () => {
   const { branding } = useBranding();
 
   if (user) {
+    if (user.role === 'superadmin') {
+      return <Navigate to="/super-admin" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
     try {
       const result = await login(email, password);
       if (result.success) {
@@ -43,9 +47,10 @@ const Login = () => {
   };
 
   const demoUsers = [
-    { email: 'admin@team.com', role: t('admin'), password: 'password' },
-    { email: 'board@team.com', role: t('boardMember'), password: 'password' },
-    { email: 'cashier@team.com', role: t('cashier'), password: 'password' }
+    { email: 'superadmin@system.com', role: 'Super Admin', password: 'superadmin123' },
+    { email: 'admin@soccerteam.local', role: t('admin'), password: 'password' },
+    { email: 'board@soccerteam.local', role: t('boardMember'), password: 'password' },
+    { email: 'cashier@soccerteam.local', role: t('cashier'), password: 'password' }
   ];
 
   const handleDemoLogin = (demoUser) => {
@@ -65,6 +70,17 @@ const Login = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
+        {/* Back to Home */}
+        <div className="text-center">
+          <a
+            href="/"
+            className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6"
+          >
+            <SafeIcon icon={FiArrowLeft} className="w-4 h-4 mr-2" />
+            Back to Home
+          </a>
+        </div>
+
         <div className="text-center">
           <motion.div
             className="flex justify-center mb-6"
@@ -202,8 +218,10 @@ const Login = () => {
               <SafeIcon icon={FiLock} className="w-4 h-4 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
               <div className="text-xs text-blue-800">
                 <p className="font-medium">{t('demoLoginInfo')}</p>
-                <p>{t('allUsersPassword')} <code className="bg-blue-100 px-1 rounded">password</code></p>
                 <p>{t('clickToAutoFill')}</p>
+                <p className="mt-1">
+                  <strong>Super Admin:</strong> Access to all tenant management features
+                </p>
               </div>
             </div>
           </div>

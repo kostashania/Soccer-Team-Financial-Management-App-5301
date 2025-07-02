@@ -27,14 +27,13 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Test connection function
 export const testConnection = async () => {
   try {
-    // Simple select query to test connection - just get one record
+    // Simple select query to test connection
     const { data, error } = await supabase
-      .from('categories_stf2024')
+      .from('tenants')
       .select('id')
       .limit(1)
-    
+
     if (error) throw error
-    
     return { success: true, message: 'Connected successfully' }
   } catch (error) {
     console.error('Connection test failed:', error)
@@ -47,14 +46,38 @@ export const getDatabaseInfo = () => {
   return {
     url: SUPABASE_URL,
     project_id: SUPABASE_URL.split('//')[1].split('.')[0],
-    schema: 'public', // Supabase uses public schema by default
+    schema: 'public',
     tables: [
-      'categories_stf2024',
-      'items_stf2024', 
-      'transactions_stf2024',
-      'platform_buttons_stf2024',
-      'users_stf2024'
+      'tenants',
+      'users_central', 
+      'global_settings',
+      'subscription_reminders'
     ]
+  }
+}
+
+// Tenant management functions
+export const createTenantSchema = async (schemaName) => {
+  try {
+    // This would need to be done via a secure Edge Function or RPC
+    // For now, we'll simulate it
+    console.log(`Creating schema: ${schemaName}`)
+    return { success: true }
+  } catch (error) {
+    console.error('Error creating tenant schema:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+export const duplicateTemplateToTenant = async (tenantSchemaName, domain) => {
+  try {
+    // This would copy all template data to the new tenant schema
+    // Implementation would be via Edge Function
+    console.log(`Duplicating template to: ${tenantSchemaName} with domain: ${domain}`)
+    return { success: true }
+  } catch (error) {
+    console.error('Error duplicating template:', error)
+    return { success: false, error: error.message }
   }
 }
 

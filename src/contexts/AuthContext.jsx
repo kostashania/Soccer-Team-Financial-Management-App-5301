@@ -14,17 +14,24 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [tenant, setTenant] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Check for stored user session
     const storedUser = localStorage.getItem('soccerTeamUser');
+    const storedTenant = localStorage.getItem('soccerTeamTenant');
+    
     if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));
+        if (storedTenant) {
+          setTenant(JSON.parse(storedTenant));
+        }
       } catch (error) {
         console.error('Error parsing stored user:', error);
         localStorage.removeItem('soccerTeamUser');
+        localStorage.removeItem('soccerTeamTenant');
       }
     }
     setLoading(false);
@@ -34,11 +41,15 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('Attempting login with:', { email, password });
 
-      // Check if user exists in our custom users table
+      // Check if user exists in central users table
       const { data: userData, error: userError } = await supabase
-        .from('users_stf2024')
-        .select('*')
+        .from('users_central')
+        .select(`
+          *,
+          tenant:tenants(*)
+        `)
         .eq('email', email)
+        .eq('active', true)
         .single();
 
       console.log('User lookup result:', { userData, userError });
@@ -55,31 +66,55 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'User not found. Please check your email address.' };
       }
 
-      // Check if the provided password matches the user's stored password
-      const storedPassword = userData.password || 'password'; // Fallback to 'password' if no password set
-      
-      console.log('Password check:', { 
-        provided: password, 
-        stored: storedPassword, 
-        match: password === storedPassword 
-      });
+      // Check password
+      const storedPassword = userData.password || 'password';
+      console.log('Password check:', { provided: password, stored: storedPassword, match: password === storedPassword });
 
       if (password === storedPassword) {
         const userObj = {
           id: userData.id,
           name: userData.name,
           email: userData.email,
-          role: userData.role
+          role: userData.role,
+          tenantId: userData.tenant_id
         };
 
+        // Set tenant info if not superadmin
+        let tenantObj = null;
+        if (userData.role !== 'superadmin' && userData.tenant) {
+          tenantObj = {
+            id: userData.tenant.id,
+            name: userData.tenant.name,
+            domain: userData.tenant.domain,
+            schemaName: userData.tenant.schema_name,
+            active: userData.tenant.active
+          };
+          
+          // Check if tenant is active
+          if (!userData.tenant.active) {
+            return { success: false, error: 'Your organization account is inactive. Please contact support.' };
+          }
+
+          // Check if subscription is expired
+          const endDate = new Date(userData.tenant.end_date);
+          if (endDate < new Date()) {
+            return { success: false, error: 'Your subscription has expired. Please contact support to renew.' };
+          }
+        }
+
         setUser(userObj);
+        setTenant(tenantObj);
+        
         localStorage.setItem('soccerTeamUser', JSON.stringify(userObj));
+        if (tenantObj) {
+          localStorage.setItem('soccerTeamTenant', JSON.stringify(tenantObj));
+        }
+
         toast.success(`Welcome back, ${userData.name}!`);
         return { success: true };
       } else {
         return { success: false, error: 'Invalid password. Please try again.' };
       }
-
     } catch (error) {
       console.error('Login error:', error);
       return { success: false, error: 'Login failed. Please try again.' };
@@ -88,12 +123,15 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setUser(null);
+    setTenant(null);
     localStorage.removeItem('soccerTeamUser');
+    localStorage.removeItem('soccerTeamTenant');
     toast.success('Logged out successfully');
   };
 
   const value = {
     user,
+    tenant,
     login,
     logout,
     loading
