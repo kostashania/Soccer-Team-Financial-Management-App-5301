@@ -11,22 +11,19 @@ import { getDatabaseInfo, testConnection } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 const {
-  FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink, FiDatabase, 
+  FiPlus, FiTrash2, FiSettings, FiUsers, FiTag, FiList, FiExternalLink, FiDatabase,
   FiWifi, FiWifiOff, FiRefreshCw, FiInfo, FiEdit3, FiSave, FiX, FiUserPlus, FiMail,
   FiShield, FiLock, FiGlobe, FiSearch, FiAlertTriangle, FiEye, FiPalette
 } = FiIcons;
 
 const AdminPanel = () => {
-  const { user } = useAuth();
+  const { user, tenant } = useAuth();
   const { t, getAllTranslations } = useLanguage();
   const {
     categories, items, platformButtons, transactions, users, connectionStatus,
-    addCategory, updateCategory, deleteCategory,
-    addItem, updateItem, deleteItem,
-    addPlatformButton, deletePlatformButton,
-    deleteTransaction,
-    addUser, updateUser, deleteUser,
-    fetchData, checkConnection
+    addCategory, updateCategory, deleteCategory, addItem, updateItem, deleteItem,
+    addPlatformButton, updatePlatformButton, deletePlatformButton, deleteTransaction, 
+    addUser, updateUser, deleteUser, fetchData, checkConnection
   } = useData();
 
   const [activeTab, setActiveTab] = useState('branding');
@@ -35,6 +32,7 @@ const AdminPanel = () => {
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
+  const [editingButton, setEditingButton] = useState(null);
   const [translationSearch, setTranslationSearch] = useState('');
 
   // Clear database states
@@ -65,7 +63,7 @@ const AdminPanel = () => {
   }
 
   const onAddCategory = (data) => {
-    console.log('=== ADDING CATEGORY ===');
+    console.log('===ADDING CATEGORY===');
     console.log('Category data:', data);
     addCategory(data);
     categoryForm.reset();
@@ -78,10 +76,10 @@ const AdminPanel = () => {
   };
 
   const onAddItem = (data) => {
-    console.log('=== ADDING ITEM FROM ADMIN PANEL ===');
+    console.log('===ADDING ITEM FROM ADMIN PANEL===');
     console.log('Item form data received:', data);
     console.log('Available categories:', categories);
-    
+
     // Validate categoryId is selected
     if (!data.categoryId || data.categoryId === '') {
       toast.error('Please select a category');
@@ -113,7 +111,7 @@ const AdminPanel = () => {
   };
 
   const onUpdateItem = (data) => {
-    console.log('=== UPDATING ITEM ===');
+    console.log('===UPDATING ITEM===');
     console.log('Update data:', data);
     
     const updateData = {
@@ -128,6 +126,12 @@ const AdminPanel = () => {
 
   const onAddButton = (data) => {
     addPlatformButton(data);
+    buttonForm.reset();
+  };
+
+  const onUpdateButton = (data) => {
+    updatePlatformButton(editingButton.id, data);
+    setEditingButton(null);
     buttonForm.reset();
   };
 
@@ -211,10 +215,11 @@ const AdminPanel = () => {
     setClearingDb(true);
     try {
       const { default: supabase } = await import('../lib/supabase');
-
+      
+      // Only clear tenant-specific data, NOT global data
       const tablesToClear = [
         'transactions_stf2024',
-        'categories_stf2024',
+        'categories_stf2024', 
         'items_stf2024',
         'platform_buttons_stf2024'
       ];
@@ -223,7 +228,7 @@ const AdminPanel = () => {
         const { error } = await supabase
           .from(table)
           .delete()
-          .neq('id', '00000000-0000-0000-0000-000000000000');
+          .eq('tenant_id', tenant.id); // Only delete this tenant's data
 
         if (error) {
           console.error(`Error clearing ${table}:`, error);
@@ -235,7 +240,7 @@ const AdminPanel = () => {
       await fetchData();
       setShowClearDbModal(false);
       setClearDbConfirmation('');
-      toast.success('Database cleared successfully (users and branding preserved)');
+      toast.success('Tenant database cleared successfully (users and branding preserved)');
     } catch (error) {
       console.error('Error clearing database:', error);
       toast.error('Failed to clear database');
@@ -253,7 +258,7 @@ const AdminPanel = () => {
   };
 
   const startEditingItem = (item) => {
-    console.log('=== STARTING TO EDIT ITEM ===');
+    console.log('===STARTING TO EDIT ITEM===');
     console.log('Item to edit:', item);
     console.log('Available categories:', categories);
     
@@ -274,6 +279,14 @@ const AdminPanel = () => {
     });
   };
 
+  const startEditingButton = (button) => {
+    setEditingButton(button);
+    buttonForm.reset({
+      text: button.text,
+      url: button.url
+    });
+  };
+
   const disapprovedTransactions = transactions.filter(t => t.approvalStatus === 'disapproved');
 
   // Get all translations for the translation management tab
@@ -285,7 +298,7 @@ const AdminPanel = () => {
     const englishText = allTranslations.en[key] || '';
     const greekText = allTranslations.el[key] || '';
     const searchLower = translationSearch.toLowerCase();
-
+    
     return (
       key.toLowerCase().includes(searchLower) ||
       englishText.toLowerCase().includes(searchLower) ||
@@ -326,12 +339,12 @@ const AdminPanel = () => {
       >
         <div className="flex items-center mb-4">
           <SafeIcon icon={FiAlertTriangle} className="w-6 h-6 text-red-600 mr-3" />
-          <h2 className="text-xl font-bold text-gray-900">Clear Database</h2>
+          <h2 className="text-xl font-bold text-gray-900">Clear Tenant Database</h2>
         </div>
-
+        
         <div className="mb-6">
           <p className="text-gray-700 mb-4">
-            <strong>⚠️ WARNING:</strong> This action will permanently delete ALL data except users and branding:
+            <strong>⚠️ WARNING:</strong> This action will permanently delete ALL tenant data:
           </p>
           <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 mb-4">
             <li>All transactions ({transactions.length} records)</li>
@@ -341,6 +354,9 @@ const AdminPanel = () => {
           </ul>
           <p className="text-sm text-green-600 mb-4">
             ✅ Users and app branding will be preserved ({users.length} users)
+          </p>
+          <p className="text-sm text-blue-600 mb-4">
+            🛡️ SAAS Protection: Only data for tenant "{tenant?.name}" will be affected
           </p>
           <p className="text-red-600 font-medium">
             This action cannot be undone!
@@ -465,7 +481,7 @@ const AdminPanel = () => {
         transition={{ duration: 0.5 }}
       >
         <h1 className="text-3xl font-bold text-gray-900">{t('adminPanel')}</h1>
-        <p className="mt-2 text-gray-600">Manage system configuration and data</p>
+        <p className="mt-2 text-gray-600">Manage system configuration and data for {tenant?.name}</p>
       </motion.div>
 
       {/* Tabs */}
@@ -554,14 +570,26 @@ const AdminPanel = () => {
           {/* Data Summary with Clear Database */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Data Summary</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Tenant Data Summary</h2>
               <button
                 onClick={() => setShowClearDbModal(true)}
                 className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
               >
                 <SafeIcon icon={FiTrash2} className="w-4 h-4 mr-2" />
-                Clear Database
+                Clear Tenant Database
               </button>
+            </div>
+
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center">
+                <SafeIcon icon={FiShield} className="w-5 h-5 text-blue-600 mr-2" />
+                <div>
+                  <p className="text-sm font-medium text-blue-900">SAAS Protection Active</p>
+                  <p className="text-xs text-blue-700">
+                    Only data for tenant "{tenant?.name}" is accessible. Other tenants' data is completely isolated.
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -590,6 +618,300 @@ const AdminPanel = () => {
         </motion.div>
       )}
 
+      {/* User Management Tab */}
+      {activeTab === 'users' && (
+        <motion.div
+          className="space-y-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {editingUser ? 'Edit User' : 'Add New User'}
+            </h2>
+
+            <form onSubmit={userForm.handleSubmit(editingUser ? onUpdateUser : onAddUser)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    {...userForm.register('name', { required: 'Name is required' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Enter full name"
+                  />
+                  {userForm.formState.errors.name && (
+                    <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.name.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    {...userForm.register('email', { 
+                      required: 'Email is required',
+                      pattern: {
+                        value: /^\S+@\S+$/i,
+                        message: 'Invalid email address'
+                      }
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Enter email address"
+                  />
+                  {userForm.formState.errors.email && (
+                    <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.email.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Role *
+                  </label>
+                  <select
+                    {...userForm.register('role', { required: 'Role is required' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="">Select role</option>
+                    <option value="admin">Admin - Full Access</option>
+                    <option value="board">Board Member - Financial Reports & Approvals</option>
+                    <option value="cashier">Cashier - Transaction Approvals</option>
+                  </select>
+                  {userForm.formState.errors.role && (
+                    <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.role.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Password *
+                  </label>
+                  <input
+                    type="password"
+                    {...userForm.register('password', { 
+                      required: 'Password is required',
+                      minLength: {
+                        value: 6,
+                        message: 'Password must be at least 6 characters'
+                      }
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Enter password"
+                  />
+                  {userForm.formState.errors.password && (
+                    <p className="mt-1 text-sm text-red-600">{userForm.formState.errors.password.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  type="submit"
+                  className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                >
+                  <SafeIcon icon={editingUser ? FiSave : FiUserPlus} className="w-4 h-4 mr-2" />
+                  {editingUser ? 'Update User' : 'Add User'}
+                </button>
+                {editingUser && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingUser(null);
+                      userForm.reset();
+                    }}
+                    className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    <SafeIcon icon={FiX} className="w-4 h-4 mr-2" />
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">System Users ({users.length})</h2>
+
+            {/* Role Permissions Info */}
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="text-sm font-medium text-blue-900 mb-2">User Role Permissions</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-blue-800">
+                <div>
+                  <strong>Admin:</strong>
+                  <ul className="list-disc list-inside mt-1 space-y-1">
+                    <li>Full system access</li>
+                    <li>User management</li>
+                    <li>System configuration</li>
+                    <li>All financial operations</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong>Board Member:</strong>
+                  <ul className="list-disc list-inside mt-1 space-y-1">
+                    <li>Financial reports</li>
+                    <li>Transaction approvals</li>
+                    <li>View all data</li>
+                    <li>Monthly reports</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong>Cashier:</strong>
+                  <ul className="list-disc list-inside mt-1 space-y-1">
+                    <li>Transaction approvals</li>
+                    <li>Basic reports</li>
+                    <li>View pending items</li>
+                    <li>Cash management</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {users.map((userItem) => (
+                <div key={userItem.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <div className="flex items-center space-x-3">
+                      <span className="font-medium text-gray-900">{userItem.name}</span>
+                      <span className="text-sm text-gray-600">{userItem.email}</span>
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        userItem.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                        userItem.role === 'board' ? 'bg-blue-100 text-blue-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {userItem.role}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => startEditingUser(userItem)}
+                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
+                    >
+                      <SafeIcon icon={FiEdit3} className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteUser(userItem.id)}
+                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+                    >
+                      <SafeIcon icon={FiTrash2} className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {users.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No users found. Add your first user above.
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Translations Tab */}
+      {activeTab === 'translations' && (
+        <motion.div
+          className="space-y-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <SafeIcon icon={FiGlobe} className="w-6 h-6 text-primary-600 mr-3" />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">{t('translationManagement')}</h2>
+                  <p className="text-sm text-gray-600">Manage application translations for multiple languages</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="mb-6">
+              <div className="relative">
+                <SafeIcon icon={FiSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder={t('searchTranslations')}
+                  value={translationSearch}
+                  onChange={(e) => setTranslationSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+            </div>
+
+            {/* Translation Info */}
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start">
+                <SafeIcon icon={FiInfo} className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+                <div>
+                  <h3 className="text-sm font-medium text-blue-900">Translation Information</h3>
+                  <p className="text-sm text-blue-700 mt-1">
+                    This system supports English and Greek languages. Translations are managed centrally 
+                    and apply to all interface elements. Total translation keys: {translationKeys.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Translations Table */}
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('uiElement')}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('englishText')}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('greekTranslation')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredTranslationKeys.map((key) => (
+                    <tr key={key} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <code className="text-sm font-mono text-gray-900 bg-gray-100 px-2 py-1 rounded">
+                          {key}
+                        </code>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900 max-w-xs truncate">
+                          {allTranslations.en[key]}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900 max-w-xs truncate">
+                          {allTranslations.el[key]}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {filteredTranslationKeys.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                No translations found matching your search criteria.
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
       {/* Categories Tab */}
       {activeTab === 'categories' && (
         <motion.div
@@ -602,7 +924,7 @@ const AdminPanel = () => {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editingCategory ? 'Edit Category' : 'Add New Category'}
             </h2>
-            
+
             <form onSubmit={categoryForm.handleSubmit(editingCategory ? onUpdateCategory : onAddCategory)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -619,6 +941,7 @@ const AdminPanel = () => {
                     <p className="mt-1 text-sm text-red-600">{categoryForm.formState.errors.name.message}</p>
                   )}
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Type *
@@ -664,7 +987,7 @@ const AdminPanel = () => {
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Existing Categories ({categories.length})</h2>
-            
+
             {/* Debug info for categories */}
             <div className="mb-4 p-3 bg-gray-50 rounded text-sm text-gray-600">
               <strong>Debug:</strong> Categories loaded: {categories.length}
@@ -681,7 +1004,9 @@ const AdminPanel = () => {
                   <div>
                     <span className="font-medium text-gray-900">{category.name}</span>
                     <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                      category.type === 'income' ? 'bg-success-100 text-success-800' : 'bg-danger-100 text-danger-800'
+                      category.type === 'income' 
+                        ? 'bg-success-100 text-success-800' 
+                        : 'bg-danger-100 text-danger-800'
                     }`}>
                       {category.type}
                     </span>
@@ -757,6 +1082,7 @@ const AdminPanel = () => {
                     <p className="mt-1 text-sm text-red-600">No categories available. Please add categories first.</p>
                   )}
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Item Name *
@@ -801,7 +1127,7 @@ const AdminPanel = () => {
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Existing Items ({items.length})</h2>
-            
+
             <div className="space-y-2">
               {items.map((item) => {
                 const category = categories.find(c => c.id === item.categoryId);
@@ -830,7 +1156,7 @@ const AdminPanel = () => {
                   </div>
                 );
               })}
-              
+
               {items.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   No items found. Add your first item above.
@@ -841,8 +1167,241 @@ const AdminPanel = () => {
         </motion.div>
       )}
 
-      {/* Rest of tabs remain the same... */}
-      
+      {/* Platform Buttons Tab */}
+      {activeTab === 'buttons' && (
+        <motion.div
+          className="space-y-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {editingButton ? 'Edit Platform Button' : 'Add New Platform Button'}
+            </h2>
+
+            <form onSubmit={buttonForm.handleSubmit(editingButton ? onUpdateButton : onAddButton)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Button Text *
+                  </label>
+                  <input
+                    type="text"
+                    {...buttonForm.register('text', { required: 'Button text is required' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Enter button text"
+                  />
+                  {buttonForm.formState.errors.text && (
+                    <p className="mt-1 text-sm text-red-600">{buttonForm.formState.errors.text.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    URL *
+                  </label>
+                  <input
+                    type="url"
+                    {...buttonForm.register('url', { 
+                      required: 'URL is required',
+                      pattern: {
+                        value: /^https?:\/\/.+/,
+                        message: 'Please enter a valid URL (starting with http:// or https://)'
+                      }
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="https://example.com"
+                  />
+                  {buttonForm.formState.errors.url && (
+                    <p className="mt-1 text-sm text-red-600">{buttonForm.formState.errors.url.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  type="submit"
+                  className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                >
+                  <SafeIcon icon={editingButton ? FiSave : FiPlus} className="w-4 h-4 mr-2" />
+                  {editingButton ? 'Update Button' : 'Add Button'}
+                </button>
+                {editingButton && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingButton(null);
+                      buttonForm.reset();
+                    }}
+                    className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    <SafeIcon icon={FiX} className="w-4 h-4 mr-2" />
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Platform Buttons ({platformButtons.length})</h2>
+
+            <div className="space-y-2">
+              {platformButtons.map((button) => (
+                <div key={button.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3">
+                      <span className="font-medium text-gray-900">{button.text}</span>
+                      <SafeIcon icon={FiExternalLink} className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1 truncate">{button.url}</p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => startEditingButton(button)}
+                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
+                    >
+                      <SafeIcon icon={FiEdit3} className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteButton(button.id)}
+                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+                    >
+                      <SafeIcon icon={FiTrash2} className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {platformButtons.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No platform buttons found. Add your first button above.
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* All Transactions Tab */}
+      {activeTab === 'transactions' && (
+        <motion.div
+          className="space-y-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">All Transactions ({transactions.length})</h2>
+
+            <div className="space-y-4">
+              {transactions.map((transaction) => (
+                <div key={transaction.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">{transaction.description}</h3>
+                      <p className="text-sm text-gray-600">
+                        {getCategoryName(transaction.categoryId)} • {getItemName(transaction.itemId)}
+                      </p>
+                      <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                        <span>{transaction.submittedBy}</span>
+                        <span>${parseFloat(transaction.amount || 0).toLocaleString()}</span>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          transaction.approvalStatus === 'approved' ? 'bg-green-100 text-green-800' :
+                          transaction.approvalStatus === 'disapproved' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {transaction.approvalStatus}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteTransaction(transaction)}
+                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+                      title="Delete Transaction"
+                    >
+                      <SafeIcon icon={FiTrash2} className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {transactions.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No transactions found.
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Disapproved Transactions Tab */}
+      {activeTab === 'disapproved' && (
+        <motion.div
+          className="space-y-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Disapproved Transactions ({disapprovedTransactions.length})
+            </h2>
+
+            {disapprovedTransactions.length === 0 ? (
+              <div className="text-center py-8">
+                <SafeIcon icon={FiEye} className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No disapproved transactions found</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Transactions that get disapproved by cashiers will appear here
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {disapprovedTransactions.map((transaction) => (
+                  <div key={transaction.id} className="border border-red-200 rounded-lg p-4 bg-red-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h3 className="font-semibold text-gray-900">{transaction.description}</h3>
+                          <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">
+                            Disapproved
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {getCategoryName(transaction.categoryId)} • {getItemName(transaction.itemId)}
+                        </p>
+                        <div className="flex items-center space-x-6 text-sm text-gray-500">
+                          <span>Amount: ${parseFloat(transaction.amount || 0).toLocaleString()}</span>
+                          <span>Submitted by: {transaction.submittedBy}</span>
+                          {transaction.disapprovedBy && (
+                            <span>Disapproved by: {transaction.disapprovedBy}</span>
+                          )}
+                          {transaction.disapprovedAt && (
+                            <span>
+                              Date: {new Date(transaction.disapprovedAt).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteTransaction(transaction)}
+                        className="p-2 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-md transition-colors"
+                        title="Delete Transaction"
+                      >
+                        <SafeIcon icon={FiTrash2} className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
       {/* Modals */}
       {showClearDbModal && <ClearDatabaseModal />}
       {showDeleteTransactionModal && <DeleteTransactionModal />}

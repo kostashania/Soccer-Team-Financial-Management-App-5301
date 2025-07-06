@@ -73,10 +73,10 @@ export const DataProvider = ({ children }) => {
 
     try {
       setLoading(true);
-      console.log('Starting tenant-filtered data fetch for:', { 
-        user: user.name, 
+      console.log('Starting tenant-filtered data fetch for:', {
+        user: user.name,
         tenant: tenant.name,
-        tenantId: tenant.id 
+        tenantId: tenant.id
       });
 
       const tenantId = tenant.id;
@@ -107,6 +107,7 @@ export const DataProvider = ({ children }) => {
             type: cat.type,
             tenantId: cat.tenant_id
           })) || [];
+
           console.log('Categories loaded for tenant:', mappedCategories);
           setCategories(mappedCategories);
 
@@ -146,6 +147,7 @@ export const DataProvider = ({ children }) => {
             categoryId: item.category_id,
             tenantId: item.tenant_id
           })) || [];
+
           console.log('Items loaded for tenant:', mappedItems);
           setItems(mappedItems);
         }
@@ -189,6 +191,7 @@ export const DataProvider = ({ children }) => {
             createdAt: trans.created_at,
             tenantId: trans.tenant_id
           })) || [];
+
           console.log('Transactions loaded for tenant:', mappedTransactions.length);
           setTransactions(mappedTransactions);
         }
@@ -284,10 +287,7 @@ export const DataProvider = ({ children }) => {
         try {
           const { data, error } = await supabase
             .from('categories_stf2024')
-            .insert({
-              ...category,
-              tenant_id: tenant.id
-            })
+            .insert({ ...category, tenant_id: tenant.id })
             .select()
             .single();
 
@@ -312,12 +312,12 @@ export const DataProvider = ({ children }) => {
 
   useEffect(() => {
     if (user && tenant) {
-      console.log('User and tenant available, fetching data...', { 
-        userName: user.name, 
+      console.log('User and tenant available, fetching data...', {
+        userName: user.name,
         tenantName: tenant.name,
-        tenantId: tenant.id 
+        tenantId: tenant.id
       });
-      
+
       if (user.role !== 'superadmin') {
         const timer = setTimeout(() => {
           fetchData();
@@ -386,7 +386,7 @@ export const DataProvider = ({ children }) => {
       };
 
       console.log('Submitting transaction with tenant_id:', tenant.id);
-      
+
       const { data, error } = await supabase
         .from('transactions_stf2024')
         .insert([transactionData])
@@ -403,7 +403,7 @@ export const DataProvider = ({ children }) => {
       }
 
       console.log('Transaction inserted successfully:', data);
-      
+
       const newTransaction = {
         ...data,
         id: data.id,
@@ -423,7 +423,6 @@ export const DataProvider = ({ children }) => {
       setTransactions(prev => [newTransaction, ...prev]);
       toast.success('Transaction created successfully!');
       console.log('===ADD TRANSACTION FUNCTION COMPLETED===');
-      
       return { success: true, data: newTransaction };
     } catch (error) {
       console.error('Error in addTransaction function:', error);
@@ -520,7 +519,6 @@ export const DataProvider = ({ children }) => {
 
     try {
       console.log('Adding category for tenant:', tenant.id);
-
       const { data, error } = await supabase
         .from('categories_stf2024')
         .insert([{
@@ -556,7 +554,6 @@ export const DataProvider = ({ children }) => {
 
     try {
       console.log('Adding item for tenant:', tenant.id);
-
       const { data, error } = await supabase
         .from('items_stf2024')
         .insert([{
@@ -590,7 +587,7 @@ export const DataProvider = ({ children }) => {
   // Other CRUD operations with tenant isolation
   const updateTransaction = async (id, updates) => {
     if (!tenant) return;
-    
+
     try {
       const dbUpdates = {};
       if (updates.approvalStatus) dbUpdates.approval_status = updates.approvalStatus;
@@ -634,7 +631,7 @@ export const DataProvider = ({ children }) => {
 
   const deleteTransaction = async (id) => {
     if (!tenant) return;
-    
+
     try {
       const { error } = await supabase
         .from('transactions_stf2024')
@@ -654,7 +651,7 @@ export const DataProvider = ({ children }) => {
 
   const updateCategory = async (id, updates) => {
     if (!tenant) return;
-    
+
     try {
       const { data, error } = await supabase
         .from('categories_stf2024')
@@ -684,7 +681,7 @@ export const DataProvider = ({ children }) => {
 
   const deleteCategory = async (id) => {
     if (!tenant) return;
-    
+
     try {
       const categoryItems = items.filter(item => item.categoryId === id);
       if (categoryItems.length > 0) {
@@ -716,7 +713,7 @@ export const DataProvider = ({ children }) => {
 
   const updateItem = async (id, updates) => {
     if (!tenant) return;
-    
+
     try {
       const dbUpdates = {};
       if (updates.name) dbUpdates.name = updates.name;
@@ -750,7 +747,7 @@ export const DataProvider = ({ children }) => {
 
   const deleteItem = async (id) => {
     if (!tenant) return;
-    
+
     try {
       const itemTransactions = transactions.filter(trans => trans.itemId === id);
       if (itemTransactions.length > 0) {
@@ -776,14 +773,11 @@ export const DataProvider = ({ children }) => {
 
   const addPlatformButton = async (button) => {
     if (!tenant) return;
-    
+
     try {
       const { data, error } = await supabase
         .from('platform_buttons_stf2024')
-        .insert([{
-          ...button,
-          tenant_id: tenant.id
-        }])
+        .insert([{ ...button, tenant_id: tenant.id }])
         .select()
         .single();
 
@@ -802,9 +796,38 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  const updatePlatformButton = async (id, updates) => {
+    if (!tenant) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('platform_buttons_stf2024')
+        .update(updates)
+        .eq('id', id)
+        .eq('tenant_id', tenant.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setPlatformButtons(prev => prev.map(btn => 
+        btn.id === id ? {
+          ...data,
+          id: data.id,
+          tenantId: data.tenant_id
+        } : btn
+      ));
+
+      toast.success('Platform button updated successfully!');
+    } catch (error) {
+      console.error('Error updating platform button:', error);
+      toast.error(`Failed to update platform button: ${error.message}`);
+    }
+  };
+
   const deletePlatformButton = async (id) => {
     if (!tenant) return;
-    
+
     try {
       const { error } = await supabase
         .from('platform_buttons_stf2024')
@@ -840,6 +863,7 @@ export const DataProvider = ({ children }) => {
     updateItem,
     deleteItem,
     addPlatformButton,
+    updatePlatformButton,
     deletePlatformButton,
     addUser,
     updateUser,
