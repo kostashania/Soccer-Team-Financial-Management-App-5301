@@ -85,7 +85,6 @@ export const DataProvider = ({ children }) => {
       console.log('Fetching categories for tenant:', tenantId);
       try {
         const hasTenantColumn = await ensureTenantColumn('categories_stf2024');
-        
         let categoriesQuery = supabase
           .from('categories_stf2024')
           .select('*')
@@ -107,7 +106,7 @@ export const DataProvider = ({ children }) => {
             type: cat.type,
             tenantId: cat.tenant_id
           })) || [];
-
+          
           console.log('Categories loaded for tenant:', mappedCategories);
           setCategories(mappedCategories);
 
@@ -125,7 +124,6 @@ export const DataProvider = ({ children }) => {
       console.log('Fetching items for tenant:', tenantId);
       try {
         const hasTenantColumn = await ensureTenantColumn('items_stf2024');
-        
         let itemsQuery = supabase
           .from('items_stf2024')
           .select('*')
@@ -147,7 +145,7 @@ export const DataProvider = ({ children }) => {
             categoryId: item.category_id,
             tenantId: item.tenant_id
           })) || [];
-
+          
           console.log('Items loaded for tenant:', mappedItems);
           setItems(mappedItems);
         }
@@ -160,7 +158,6 @@ export const DataProvider = ({ children }) => {
       console.log('Fetching transactions for tenant:', tenantId);
       try {
         const hasTenantColumn = await ensureTenantColumn('transactions_stf2024');
-        
         let transactionsQuery = supabase
           .from('transactions_stf2024')
           .select('*')
@@ -191,7 +188,7 @@ export const DataProvider = ({ children }) => {
             createdAt: trans.created_at,
             tenantId: trans.tenant_id
           })) || [];
-
+          
           console.log('Transactions loaded for tenant:', mappedTransactions.length);
           setTransactions(mappedTransactions);
         }
@@ -204,7 +201,6 @@ export const DataProvider = ({ children }) => {
       console.log('Fetching platform buttons for tenant:', tenantId);
       try {
         const hasTenantColumn = await ensureTenantColumn('platform_buttons_stf2024');
-        
         let buttonsQuery = supabase
           .from('platform_buttons_stf2024')
           .select('*')
@@ -274,7 +270,7 @@ export const DataProvider = ({ children }) => {
 
     try {
       console.log('Creating default data for tenant:', tenant.id);
-
+      
       // Create default categories for this tenant
       const defaultCategories = [
         { name: 'Training Equipment', type: 'expense' },
@@ -287,7 +283,10 @@ export const DataProvider = ({ children }) => {
         try {
           const { data, error } = await supabase
             .from('categories_stf2024')
-            .insert({ ...category, tenant_id: tenant.id })
+            .insert({
+              ...category,
+              tenant_id: tenant.id
+            })
             .select()
             .single();
 
@@ -303,7 +302,7 @@ export const DataProvider = ({ children }) => {
           console.log('Default category creation skipped:', error.message);
         }
       }
-
+      
       console.log('Default tenant data created');
     } catch (error) {
       console.error('Error creating default tenant data:', error);
@@ -317,7 +316,7 @@ export const DataProvider = ({ children }) => {
         tenantName: tenant.name,
         tenantId: tenant.id
       });
-
+      
       if (user.role !== 'superadmin') {
         const timer = setTimeout(() => {
           fetchData();
@@ -327,7 +326,10 @@ export const DataProvider = ({ children }) => {
         setLoading(false);
       }
     } else {
-      console.log('User or tenant not available:', { user: !!user, tenant: !!tenant });
+      console.log('User or tenant not available:', {
+        user: !!user,
+        tenant: !!tenant
+      });
       setLoading(false);
     }
   }, [user, tenant]);
@@ -352,7 +354,6 @@ export const DataProvider = ({ children }) => {
       if (categories.length === 0) {
         throw new Error('Categories not loaded. Please refresh the page.');
       }
-
       if (items.length === 0) {
         throw new Error('Items not loaded. Please refresh the page.');
       }
@@ -364,7 +365,6 @@ export const DataProvider = ({ children }) => {
       if (!categoryExists) {
         throw new Error('Selected category is invalid. Please refresh and try again.');
       }
-
       if (!itemExists) {
         throw new Error('Selected item is invalid. Please refresh and try again.');
       }
@@ -423,6 +423,7 @@ export const DataProvider = ({ children }) => {
       setTransactions(prev => [newTransaction, ...prev]);
       toast.success('Transaction created successfully!');
       console.log('===ADD TRANSACTION FUNCTION COMPLETED===');
+
       return { success: true, data: newTransaction };
     } catch (error) {
       console.error('Error in addTransaction function:', error);
@@ -478,15 +479,13 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      setUsers(prev => prev.map(user => 
-        user.id === id ? {
-          id: data.id,
-          name: data.name,
-          email: data.email,
-          role: data.role,
-          password: data.password
-        } : user
-      ));
+      setUsers(prev => prev.map(user => user.id === id ? {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        password: data.password
+      } : user));
 
       toast.success('User updated successfully!');
     } catch (error) {
@@ -606,23 +605,21 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      setTransactions(prev => prev.map(t => 
-        t.id === id ? {
-          ...t,
-          ...updates,
-          categoryId: data.category_id,
-          itemId: data.item_id,
-          submittedBy: data.submitted_by,
-          approvalStatus: data.approval_status,
-          approvedBy: data.approved_by,
-          approvedAt: data.approved_at,
-          disapprovedBy: data.disapproved_by,
-          disapprovedAt: data.disapproved_at,
-          expectedDate: data.expected_date,
-          createdAt: data.created_at,
-          tenantId: data.tenant_id
-        } : t
-      ));
+      setTransactions(prev => prev.map(t => t.id === id ? {
+        ...t,
+        ...updates,
+        categoryId: data.category_id,
+        itemId: data.item_id,
+        submittedBy: data.submitted_by,
+        approvalStatus: data.approval_status,
+        approvedBy: data.approved_by,
+        approvedAt: data.approved_at,
+        disapprovedBy: data.disapproved_by,
+        disapprovedAt: data.disapproved_at,
+        expectedDate: data.expected_date,
+        createdAt: data.created_at,
+        tenantId: data.tenant_id
+      } : t));
     } catch (error) {
       console.error('Error updating transaction:', error);
       toast.error(`Failed to update transaction: ${error.message}`);
@@ -663,14 +660,12 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      setCategories(prev => prev.map(cat => 
-        cat.id === id ? {
-          id: data.id,
-          name: data.name,
-          type: data.type,
-          tenantId: data.tenant_id
-        } : cat
-      ));
+      setCategories(prev => prev.map(cat => cat.id === id ? {
+        id: data.id,
+        name: data.name,
+        type: data.type,
+        tenantId: data.tenant_id
+      } : cat));
 
       toast.success('Category updated successfully!');
     } catch (error) {
@@ -729,14 +724,12 @@ export const DataProvider = ({ children }) => {
 
       if (error) throw error;
 
-      setItems(prev => prev.map(item => 
-        item.id === id ? {
-          id: data.id,
-          name: data.name,
-          categoryId: data.category_id,
-          tenantId: data.tenant_id
-        } : item
-      ));
+      setItems(prev => prev.map(item => item.id === id ? {
+        id: data.id,
+        name: data.name,
+        categoryId: data.category_id,
+        tenantId: data.tenant_id
+      } : item));
 
       toast.success('Item updated successfully!');
     } catch (error) {
@@ -777,7 +770,10 @@ export const DataProvider = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('platform_buttons_stf2024')
-        .insert([{ ...button, tenant_id: tenant.id }])
+        .insert([{
+          ...button,
+          tenant_id: tenant.id
+        }])
         .select()
         .single();
 

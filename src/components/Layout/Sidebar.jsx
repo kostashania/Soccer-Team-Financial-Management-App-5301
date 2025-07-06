@@ -6,13 +6,18 @@ import SafeIcon from '../common/SafeIcon';
 import AppLogo from '../common/AppLogo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import clsx from 'clsx';
 
-const { FiHome, FiDollarSign, FiPlus, FiCheckSquare, FiFileText, FiCalendar, FiFilter, FiSettings, FiExternalLink, FiX } = FiIcons;
+const {
+  FiHome, FiDollarSign, FiPlus, FiCheckSquare, FiFileText, FiCalendar,
+  FiFilter, FiSettings, FiExternalLink, FiX, FiCreditCard, FiAlertTriangle
+} = FiIcons;
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { isExpiringSoon, isExpired } = useSubscription();
   const location = useLocation();
 
   const getMenuItems = () => {
@@ -25,6 +30,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       { path: '/monthly-report', label: t('monthlyReport'), icon: FiCalendar, roles: ['admin', 'board', 'cashier'] },
       { path: '/super-filter', label: t('superFilter'), icon: FiFilter, roles: ['admin', 'board', 'cashier'] },
       { path: '/platform', label: t('platform'), icon: FiExternalLink, roles: ['admin', 'board', 'cashier'] },
+      { path: '/subscription', label: 'Subscription', icon: FiCreditCard, roles: ['admin', 'board'] },
       { path: '/admin-panel', label: t('adminPanel'), icon: FiSettings, roles: ['admin'] }
     ];
 
@@ -32,6 +38,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   };
 
   const menuItems = getMenuItems();
+  const showSubscriptionAlert = (isExpiringSoon() || isExpired()) && ['admin', 'board'].includes(user?.role);
 
   return (
     <>
@@ -66,6 +73,27 @@ const Sidebar = ({ isOpen, onClose }) => {
           </button>
         </div>
 
+        {/* Subscription Alert */}
+        {showSubscriptionAlert && (
+          <div className="m-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center">
+              <SafeIcon icon={FiAlertTriangle} className="w-4 h-4 text-red-600 mr-2" />
+              <div>
+                <p className="text-xs font-medium text-red-900">
+                  {isExpired() ? 'Subscription Expired' : 'Expiring Soon'}
+                </p>
+                <NavLink
+                  to="/subscription"
+                  className="text-xs text-red-700 hover:text-red-800 underline"
+                  onClick={onClose}
+                >
+                  Renew now
+                </NavLink>
+              </div>
+            </div>
+          </div>
+        )}
+
         <nav className="mt-6 px-3">
           <div className="space-y-1">
             {menuItems.map((item) => (
@@ -92,6 +120,9 @@ const Sidebar = ({ isOpen, onClose }) => {
                   )}
                 />
                 {item.label}
+                {item.path === '/subscription' && showSubscriptionAlert && (
+                  <div className="ml-auto w-2 h-2 bg-red-500 rounded-full"></div>
+                )}
               </NavLink>
             ))}
           </div>
