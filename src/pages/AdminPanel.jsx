@@ -54,6 +54,20 @@ const AdminPanel = () => {
     setDbInfo(getDatabaseInfo());
   }, []);
 
+  // Debug logging
+  useEffect(() => {
+    console.log('AdminPanel Debug:', {
+      activeTab,
+      usersCount: users?.length || 0,
+      platformButtonsCount: platformButtons?.length || 0,
+      categoriesCount: categories?.length || 0,
+      itemsCount: items?.length || 0,
+      transactionsCount: transactions?.length || 0,
+      tenant: tenant?.name,
+      user: user?.name
+    });
+  }, [activeTab, users, platformButtons, categories, items, transactions, tenant, user]);
+
   if (user?.role !== 'admin') {
     return (
       <div className="text-center py-8">
@@ -125,22 +139,26 @@ const AdminPanel = () => {
   };
 
   const onAddButton = (data) => {
+    console.log('Adding platform button:', data);
     addPlatformButton(data);
     buttonForm.reset();
   };
 
   const onUpdateButton = (data) => {
+    console.log('Updating platform button:', data);
     updatePlatformButton(editingButton.id, data);
     setEditingButton(null);
     buttonForm.reset();
   };
 
   const onAddUser = (data) => {
+    console.log('Adding user:', data);
     addUser(data);
     userForm.reset();
   };
 
   const onUpdateUser = (data) => {
+    console.log('Updating user:', data);
     updateUser(editingUser.id, data);
     setEditingUser(null);
     userForm.reset();
@@ -353,7 +371,7 @@ const AdminPanel = () => {
             <li>All platform buttons ({platformButtons.length} records)</li>
           </ul>
           <p className="text-sm text-green-600 mb-4">
-            ✅ Users and app branding will be preserved ({users.length} users)
+            ✅ Users and app branding will be preserved ({users?.length || 0} users)
           </p>
           <p className="text-sm text-blue-600 mb-4">
             🛡️ SAAS Protection: Only data for tenant "{tenant?.name}" will be affected
@@ -483,6 +501,22 @@ const AdminPanel = () => {
         <h1 className="text-3xl font-bold text-gray-900">{t('adminPanel')}</h1>
         <p className="mt-2 text-gray-600">Manage system configuration and data for {tenant?.name}</p>
       </motion.div>
+
+      {/* Debug Info */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-yellow-900 mb-2">Debug Information</h3>
+        <div className="text-xs text-yellow-700 space-y-1">
+          <div>Active Tab: {activeTab}</div>
+          <div>Users: {users?.length || 0} loaded</div>
+          <div>Platform Buttons: {platformButtons?.length || 0} loaded</div>
+          <div>Categories: {categories?.length || 0} loaded</div>
+          <div>Items: {items?.length || 0} loaded</div>
+          <div>Transactions: {transactions?.length || 0} loaded</div>
+          <div>Tenant: {tenant?.name || 'None'}</div>
+          <div>User Role: {user?.role || 'None'}</div>
+          <div>Translation Keys: {translationKeys?.length || 0}</div>
+        </div>
+      </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
@@ -737,7 +771,7 @@ const AdminPanel = () => {
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">System Users ({users.length})</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">System Users ({users?.length || 0})</h2>
 
             {/* Role Permissions Info */}
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -773,42 +807,51 @@ const AdminPanel = () => {
               </div>
             </div>
 
+            {/* Users List */}
             <div className="space-y-2">
-              {users.map((userItem) => (
-                <div key={userItem.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <div className="flex items-center space-x-3">
-                      <span className="font-medium text-gray-900">{userItem.name}</span>
-                      <span className="text-sm text-gray-600">{userItem.email}</span>
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        userItem.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                        userItem.role === 'board' ? 'bg-blue-100 text-blue-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {userItem.role}
-                      </span>
+              {users && users.length > 0 ? (
+                users.map((userItem) => (
+                  <div key={userItem.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <div className="flex items-center space-x-3">
+                        <span className="font-medium text-gray-900">{userItem.name}</span>
+                        <span className="text-sm text-gray-600">{userItem.email}</span>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          userItem.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                          userItem.role === 'board' ? 'bg-blue-100 text-blue-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {userItem.role}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => startEditingUser(userItem)}
+                        className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
+                      >
+                        <SafeIcon icon={FiEdit3} className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(userItem.id)}
+                        className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+                      >
+                        <SafeIcon icon={FiTrash2} className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => startEditingUser(userItem)}
-                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
-                    >
-                      <SafeIcon icon={FiEdit3} className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteUser(userItem.id)}
-                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
-                    >
-                      <SafeIcon icon={FiTrash2} className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              {users.length === 0 && (
+                ))
+              ) : (
                 <div className="text-center py-8 text-gray-500">
-                  No users found. Add your first user above.
+                  <SafeIcon icon={FiUsers} className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-lg font-medium text-gray-600">No users found</p>
+                  <p className="text-sm text-gray-500 mt-2">Add your first user using the form above.</p>
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Note:</strong> Users are loaded from the central users table for this tenant.
+                      If you don't see users here, they may need to be created in the tenant settings.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -841,7 +884,7 @@ const AdminPanel = () => {
                 <SafeIcon icon={FiSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder={t('searchTranslations')}
+                  placeholder="Search translations..."
                   value={translationSearch}
                   onChange={(e) => setTranslationSearch(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -857,57 +900,190 @@ const AdminPanel = () => {
                   <h3 className="text-sm font-medium text-blue-900">Translation Information</h3>
                   <p className="text-sm text-blue-700 mt-1">
                     This system supports English and Greek languages. Translations are managed centrally 
-                    and apply to all interface elements. Total translation keys: {translationKeys.length}
+                    and apply to all interface elements. Total translation keys: {translationKeys?.length || 0}
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Translations Table */}
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {t('uiElement')}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {t('englishText')}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {t('greekTranslation')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredTranslationKeys.map((key) => (
-                    <tr key={key} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <code className="text-sm font-mono text-gray-900 bg-gray-100 px-2 py-1 rounded">
-                          {key}
-                        </code>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900 max-w-xs truncate">
-                          {allTranslations.en[key]}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900 max-w-xs truncate">
-                          {allTranslations.el[key]}
-                        </div>
-                      </td>
+            {translationKeys && translationKeys.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        UI Element
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        English Text
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Greek Translation
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {filteredTranslationKeys.length === 0 && (
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredTranslationKeys.map((key) => (
+                      <tr key={key} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <code className="text-sm font-mono text-gray-900 bg-gray-100 px-2 py-1 rounded">
+                            {key}
+                          </code>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900 max-w-xs truncate">
+                            {allTranslations.en?.[key] || 'Missing'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900 max-w-xs truncate">
+                            {allTranslations.el?.[key] || 'Missing'}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
               <div className="text-center py-8 text-gray-500">
-                No translations found matching your search criteria.
+                <SafeIcon icon={FiGlobe} className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-lg font-medium text-gray-600">No translations found</p>
+                <p className="text-sm text-gray-500 mt-2">Translation system is not properly configured.</p>
               </div>
             )}
+
+            {filteredTranslationKeys.length === 0 && translationKeys.length > 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <p>No translations found matching your search criteria.</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Platform Buttons Tab */}
+      {activeTab === 'buttons' && (
+        <motion.div
+          className="space-y-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {editingButton ? 'Edit Platform Button' : 'Add New Platform Button'}
+            </h2>
+
+            <form onSubmit={buttonForm.handleSubmit(editingButton ? onUpdateButton : onAddButton)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Button Text *
+                  </label>
+                  <input
+                    type="text"
+                    {...buttonForm.register('text', { required: 'Button text is required' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Enter button text"
+                  />
+                  {buttonForm.formState.errors.text && (
+                    <p className="mt-1 text-sm text-red-600">{buttonForm.formState.errors.text.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    URL *
+                  </label>
+                  <input
+                    type="url"
+                    {...buttonForm.register('url', { 
+                      required: 'URL is required',
+                      pattern: {
+                        value: /^https?:\/\/.+/,
+                        message: 'Please enter a valid URL (starting with http:// or https://)'
+                      }
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="https://example.com"
+                  />
+                  {buttonForm.formState.errors.url && (
+                    <p className="mt-1 text-sm text-red-600">{buttonForm.formState.errors.url.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  type="submit"
+                  className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                >
+                  <SafeIcon icon={editingButton ? FiSave : FiPlus} className="w-4 h-4 mr-2" />
+                  {editingButton ? 'Update Button' : 'Add Button'}
+                </button>
+                {editingButton && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingButton(null);
+                      buttonForm.reset();
+                    }}
+                    className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    <SafeIcon icon={FiX} className="w-4 h-4 mr-2" />
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Platform Buttons ({platformButtons?.length || 0})</h2>
+
+            {/* Platform Buttons List */}
+            <div className="space-y-2">
+              {platformButtons && platformButtons.length > 0 ? (
+                platformButtons.map((button) => (
+                  <div key={button.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <span className="font-medium text-gray-900">{button.text}</span>
+                        <SafeIcon icon={FiExternalLink} className="w-4 h-4 text-gray-400" />
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1 truncate">{button.url}</p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => startEditingButton(button)}
+                        className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
+                      >
+                        <SafeIcon icon={FiEdit3} className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteButton(button.id)}
+                        className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+                      >
+                        <SafeIcon icon={FiTrash2} className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <SafeIcon icon={FiExternalLink} className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-lg font-medium text-gray-600">No platform buttons found</p>
+                  <p className="text-sm text-gray-500 mt-2">Add your first platform button using the form above.</p>
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>Tip:</strong> Platform buttons allow users to quickly access external tools and resources.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
       )}
@@ -988,16 +1164,6 @@ const AdminPanel = () => {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Existing Categories ({categories.length})</h2>
 
-            {/* Debug info for categories */}
-            <div className="mb-4 p-3 bg-gray-50 rounded text-sm text-gray-600">
-              <strong>Debug:</strong> Categories loaded: {categories.length}
-              {categories.length > 0 && (
-                <div className="mt-1">
-                  Sample category: {JSON.stringify(categories[0])}
-                </div>
-              )}
-            </div>
-
             <div className="space-y-2">
               {categories.map((category) => (
                 <div key={category.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -1044,19 +1210,6 @@ const AdminPanel = () => {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editingItem ? 'Edit Item' : 'Add New Item'}
             </h2>
-
-            {/* Debug info for items form */}
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
-              <strong>Debug Info:</strong>
-              <div>Categories available: {categories.length}</div>
-              <div>Items loaded: {items.length}</div>
-              {editingItem && (
-                <div>Editing item: {editingItem.name} (Category ID: {editingItem.categoryId})</div>
-              )}
-              {categories.length > 0 && (
-                <div>Sample category: ID="{categories[0].id}" (type: {typeof categories[0].id})</div>
-              )}
-            </div>
 
             <form onSubmit={itemForm.handleSubmit(editingItem ? onUpdateItem : onAddItem)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1160,123 +1313,6 @@ const AdminPanel = () => {
               {items.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   No items found. Add your first item above.
-                </div>
-              )}
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Platform Buttons Tab */}
-      {activeTab === 'buttons' && (
-        <motion.div
-          className="space-y-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {editingButton ? 'Edit Platform Button' : 'Add New Platform Button'}
-            </h2>
-
-            <form onSubmit={buttonForm.handleSubmit(editingButton ? onUpdateButton : onAddButton)} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Button Text *
-                  </label>
-                  <input
-                    type="text"
-                    {...buttonForm.register('text', { required: 'Button text is required' })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Enter button text"
-                  />
-                  {buttonForm.formState.errors.text && (
-                    <p className="mt-1 text-sm text-red-600">{buttonForm.formState.errors.text.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    URL *
-                  </label>
-                  <input
-                    type="url"
-                    {...buttonForm.register('url', { 
-                      required: 'URL is required',
-                      pattern: {
-                        value: /^https?:\/\/.+/,
-                        message: 'Please enter a valid URL (starting with http:// or https://)'
-                      }
-                    })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="https://example.com"
-                  />
-                  {buttonForm.formState.errors.url && (
-                    <p className="mt-1 text-sm text-red-600">{buttonForm.formState.errors.url.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex space-x-3">
-                <button
-                  type="submit"
-                  className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-                >
-                  <SafeIcon icon={editingButton ? FiSave : FiPlus} className="w-4 h-4 mr-2" />
-                  {editingButton ? 'Update Button' : 'Add Button'}
-                </button>
-                {editingButton && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingButton(null);
-                      buttonForm.reset();
-                    }}
-                    className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-                  >
-                    <SafeIcon icon={FiX} className="w-4 h-4 mr-2" />
-                    Cancel
-                  </button>
-                )}
-              </div>
-            </form>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Platform Buttons ({platformButtons.length})</h2>
-
-            <div className="space-y-2">
-              {platformButtons.map((button) => (
-                <div key={button.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <span className="font-medium text-gray-900">{button.text}</span>
-                      <SafeIcon icon={FiExternalLink} className="w-4 h-4 text-gray-400" />
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1 truncate">{button.url}</p>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => startEditingButton(button)}
-                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
-                    >
-                      <SafeIcon icon={FiEdit3} className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteButton(button.id)}
-                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
-                    >
-                      <SafeIcon icon={FiTrash2} className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              {platformButtons.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  No platform buttons found. Add your first button above.
                 </div>
               )}
             </div>
