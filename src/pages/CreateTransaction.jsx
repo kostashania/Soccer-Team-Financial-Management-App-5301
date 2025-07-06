@@ -17,14 +17,7 @@ const CreateTransaction = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    reset,
-    setValue,
-    formState: { errors }
-  } = useForm({
+  const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm({
     defaultValues: {
       submittedBy: user?.name,
       type: 'expense',
@@ -152,20 +145,25 @@ const CreateTransaction = () => {
         throw new Error('addTransaction function is not available');
       }
 
-      await addTransaction(transactionData);
-      console.log('Transaction created successfully!');
+      const result = await addTransaction(transactionData);
+      
+      if (result && result.success) {
+        console.log('Transaction created successfully!');
 
-      reset({
-        submittedBy: user?.name,
-        type: 'expense',
-        status: 'paid',
-        official: 'true',
-        count: 'true',
-        categoryId: '',
-        itemId: ''
-      });
-      setSelectedFiles([]);
-      toast.success('Transaction created successfully!');
+        // Reset form
+        reset({
+          submittedBy: user?.name,
+          type: 'expense',
+          status: 'paid',
+          official: 'true',
+          count: 'true',
+          categoryId: '',
+          itemId: ''
+        });
+        setSelectedFiles([]);
+        
+        toast.success('Transaction created successfully!');
+      }
     } catch (error) {
       console.error('Error creating transaction:', error);
       toast.error(`Failed to create transaction: ${error.message}`);
@@ -407,6 +405,7 @@ const CreateTransaction = () => {
                   <SafeIcon icon={FiUpload} className="w-8 h-8 text-gray-400" />
                   <span className="text-sm text-gray-600">Click to upload files</span>
                 </label>
+
                 {selectedFiles.length > 0 && (
                   <div className="mt-4 space-y-2">
                     {selectedFiles.map((file, index) => (

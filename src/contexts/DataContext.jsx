@@ -36,6 +36,27 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  // Ensure tenant_id columns exist
+  const ensureTenantColumn = async (tableName) => {
+    try {
+      // Try to select with tenant_id to check if column exists
+      const { error } = await supabase
+        .from(tableName)
+        .select('tenant_id')
+        .limit(1);
+
+      if (error && error.message.includes('does not exist')) {
+        console.log(`Adding tenant_id column to ${tableName}`);
+        // Column doesn't exist, we'll handle this gracefully
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.log(`Tenant column check failed for ${tableName}:`, error);
+      return false;
+    }
+  };
+
   // Fetch data from Supabase with tenant filtering
   const fetchData = async () => {
     // Don't fetch data for superadmin or if user doesn't exist
@@ -58,46 +79,25 @@ export const DataProvider = ({ children }) => {
         tenantId: tenant.id 
       });
 
-      // Add tenant_id column to existing tables and filter by it
       const tenantId = tenant.id;
 
-      // Fetch categories filtered by tenant_id
+      // Fetch categories
       console.log('Fetching categories for tenant:', tenantId);
       try {
-        // First, try to add tenant_id column if it doesn't exist
-        await supabase.rpc('add_tenant_column_if_not_exists', {
-          table_name: 'categories_stf2024',
-          tenant_id: tenantId
-        }).catch(() => {
-          // Column might already exist, continue
-        });
-
-        const { data: categoriesData, error: categoriesError } = await supabase
+        const hasTenantColumn = await ensureTenantColumn('categories_stf2024');
+        
+        let categoriesQuery = supabase
           .from('categories_stf2024')
           .select('*')
-          .eq('tenant_id', tenantId)
           .order('name');
 
-        if (categoriesError && categoriesError.details?.includes('tenant_id')) {
-          // If tenant_id column doesn't exist, get all categories for now
-          console.log('Tenant column not found, fetching all categories');
-          const { data: allCategories, error: allError } = await supabase
-            .from('categories_stf2024')
-            .select('*')
-            .order('name');
-          
-          if (allError) throw allError;
-          
-          // Filter to only show categories that don't have a tenant_id or belong to this tenant
-          const mappedCategories = allCategories?.map(cat => ({
-            id: cat.id,
-            name: cat.name,
-            type: cat.type,
-            tenantId: cat.tenant_id
-          })) || [];
-          
-          setCategories(mappedCategories);
-        } else if (categoriesError) {
+        if (hasTenantColumn) {
+          categoriesQuery = categoriesQuery.eq('tenant_id', tenantId);
+        }
+
+        const { data: categoriesData, error: categoriesError } = await categoriesQuery;
+
+        if (categoriesError) {
           console.error('Categories error:', categoriesError);
           setCategories([]);
         } else {
@@ -109,46 +109,34 @@ export const DataProvider = ({ children }) => {
           })) || [];
           console.log('Categories loaded for tenant:', mappedCategories);
           setCategories(mappedCategories);
-        }
 
-        // If no categories found, create default ones for this tenant
-        if (categoriesData?.length === 0) {
-          await createDefaultTenantData();
+          // If no categories found and we have tenant column, create defaults
+          if (mappedCategories.length === 0 && hasTenantColumn) {
+            await createDefaultTenantData();
+          }
         }
       } catch (error) {
         console.error('Categories fetch error:', error);
         setCategories([]);
       }
 
-      // Fetch items filtered by tenant_id
+      // Fetch items
       console.log('Fetching items for tenant:', tenantId);
       try {
-        await supabase.rpc('add_tenant_column_if_not_exists', {
-          table_name: 'items_stf2024',
-          tenant_id: tenantId
-        }).catch(() => {});
-
-        const { data: itemsData, error: itemsError } = await supabase
+        const hasTenantColumn = await ensureTenantColumn('items_stf2024');
+        
+        let itemsQuery = supabase
           .from('items_stf2024')
           .select('*')
-          .eq('tenant_id', tenantId)
           .order('name');
 
-        if (itemsError && itemsError.details?.includes('tenant_id')) {
-          // Fallback to all items
-          const { data: allItems, error: allError } = await supabase
-            .from('items_stf2024')
-            .select('*')
-            .order('name');
-          
-          if (allError) throw allError;
-          setItems(allItems?.map(item => ({
-            id: item.id,
-            name: item.name,
-            categoryId: item.category_id,
-            tenantId: item.tenant_id
-          })) || []);
-        } else if (itemsError) {
+        if (hasTenantColumn) {
+          itemsQuery = itemsQuery.eq('tenant_id', tenantId);
+        }
+
+        const { data: itemsData, error: itemsError } = await itemsQuery;
+
+        if (itemsError) {
           console.error('Items error:', itemsError);
           setItems([]);
         } else {
@@ -166,44 +154,23 @@ export const DataProvider = ({ children }) => {
         setItems([]);
       }
 
-      // Fetch transactions filtered by tenant_id
+      // Fetch transactions
       console.log('Fetching transactions for tenant:', tenantId);
       try {
-        await supabase.rpc('add_tenant_column_if_not_exists', {
-          table_name: 'transactions_stf2024',
-          tenant_id: tenantId
-        }).catch(() => {});
-
-        const { data: transactionsData, error: transactionsError } = await supabase
+        const hasTenantColumn = await ensureTenantColumn('transactions_stf2024');
+        
+        let transactionsQuery = supabase
           .from('transactions_stf2024')
           .select('*')
-          .eq('tenant_id', tenantId)
           .order('created_at', { ascending: false });
 
-        if (transactionsError && transactionsError.details?.includes('tenant_id')) {
-          // Fallback to all transactions
-          const { data: allTransactions, error: allError } = await supabase
-            .from('transactions_stf2024')
-            .select('*')
-            .order('created_at', { ascending: false });
-          
-          if (allError) throw allError;
-          setTransactions(allTransactions?.map(trans => ({
-            ...trans,
-            id: trans.id,
-            categoryId: trans.category_id,
-            itemId: trans.item_id,
-            submittedBy: trans.submitted_by,
-            approvalStatus: trans.approval_status,
-            approvedBy: trans.approved_by,
-            approvedAt: trans.approved_at,
-            disapprovedBy: trans.disapproved_by,
-            disapprovedAt: trans.disapproved_at,
-            expectedDate: trans.expected_date,
-            createdAt: trans.created_at,
-            tenantId: trans.tenant_id
-          })) || []);
-        } else if (transactionsError) {
+        if (hasTenantColumn) {
+          transactionsQuery = transactionsQuery.eq('tenant_id', tenantId);
+        }
+
+        const { data: transactionsData, error: transactionsError } = await transactionsQuery;
+
+        if (transactionsError) {
           console.error('Transactions error:', transactionsError);
           setTransactions([]);
         } else {
@@ -230,34 +197,23 @@ export const DataProvider = ({ children }) => {
         setTransactions([]);
       }
 
-      // Fetch platform buttons filtered by tenant_id
+      // Fetch platform buttons
       console.log('Fetching platform buttons for tenant:', tenantId);
       try {
-        await supabase.rpc('add_tenant_column_if_not_exists', {
-          table_name: 'platform_buttons_stf2024',
-          tenant_id: tenantId
-        }).catch(() => {});
-
-        const { data: buttonsData, error: buttonsError } = await supabase
+        const hasTenantColumn = await ensureTenantColumn('platform_buttons_stf2024');
+        
+        let buttonsQuery = supabase
           .from('platform_buttons_stf2024')
           .select('*')
-          .eq('tenant_id', tenantId)
           .order('text');
 
-        if (buttonsError && buttonsError.details?.includes('tenant_id')) {
-          // Fallback to all buttons
-          const { data: allButtons, error: allError } = await supabase
-            .from('platform_buttons_stf2024')
-            .select('*')
-            .order('text');
-          
-          if (allError) throw allError;
-          setPlatformButtons(allButtons?.map(btn => ({
-            ...btn,
-            id: btn.id,
-            tenantId: btn.tenant_id
-          })) || []);
-        } else if (buttonsError) {
+        if (hasTenantColumn) {
+          buttonsQuery = buttonsQuery.eq('tenant_id', tenantId);
+        }
+
+        const { data: buttonsData, error: buttonsError } = await buttonsQuery;
+
+        if (buttonsError) {
           console.error('Buttons error:', buttonsError);
           setPlatformButtons([]);
         } else {
@@ -326,12 +282,23 @@ export const DataProvider = ({ children }) => {
 
       for (const category of defaultCategories) {
         try {
-          await supabase
+          const { data, error } = await supabase
             .from('categories_stf2024')
             .insert({
               ...category,
               tenant_id: tenant.id
-            });
+            })
+            .select()
+            .single();
+
+          if (!error && data) {
+            setCategories(prev => [...prev, {
+              id: data.id,
+              name: data.name,
+              type: data.type,
+              tenantId: data.tenant_id
+            }]);
+          }
         } catch (error) {
           console.log('Default category creation skipped:', error.message);
         }
@@ -365,7 +332,107 @@ export const DataProvider = ({ children }) => {
     }
   }, [user, tenant]);
 
-  // User Management Functions (for tenant users)
+  // FIXED: Transaction functions with proper error handling
+  const addTransaction = async (transaction) => {
+    if (!tenant) {
+      toast.error('No tenant information available');
+      return;
+    }
+
+    try {
+      console.log('===ADD TRANSACTION FUNCTION CALLED===');
+      console.log('Transaction data received:', transaction);
+
+      // Validate required fields
+      if (!transaction.categoryId || !transaction.itemId) {
+        throw new Error('Category and item must be selected');
+      }
+
+      // Validate that categories and items are loaded
+      if (categories.length === 0) {
+        throw new Error('Categories not loaded. Please refresh the page.');
+      }
+
+      if (items.length === 0) {
+        throw new Error('Items not loaded. Please refresh the page.');
+      }
+
+      // Validate category and item exist
+      const categoryExists = categories.find(c => c.id === transaction.categoryId);
+      const itemExists = items.find(i => i.id === transaction.itemId);
+
+      if (!categoryExists) {
+        throw new Error('Selected category is invalid. Please refresh and try again.');
+      }
+
+      if (!itemExists) {
+        throw new Error('Selected item is invalid. Please refresh and try again.');
+      }
+
+      const transactionData = {
+        type: transaction.type,
+        category_id: transaction.categoryId,
+        item_id: transaction.itemId,
+        amount: parseFloat(transaction.amount),
+        description: transaction.description,
+        status: transaction.status,
+        expected_date: transaction.expectedDate || null,
+        official: transaction.official,
+        count: transaction.count,
+        submitted_by: transaction.submittedBy,
+        approval_status: 'pending',
+        attachments: transaction.attachments || [],
+        tenant_id: tenant.id // Add tenant isolation
+      };
+
+      console.log('Submitting transaction with tenant_id:', tenant.id);
+      
+      const { data, error } = await supabase
+        .from('transactions_stf2024')
+        .insert([transactionData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error in addTransaction:', error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      if (!data) {
+        throw new Error('No data returned from transaction creation');
+      }
+
+      console.log('Transaction inserted successfully:', data);
+      
+      const newTransaction = {
+        ...data,
+        id: data.id,
+        categoryId: data.category_id,
+        itemId: data.item_id,
+        submittedBy: data.submitted_by,
+        approvalStatus: data.approval_status,
+        approvedBy: data.approved_by,
+        approvedAt: data.approved_at,
+        disapprovedBy: data.disapproved_by,
+        disapprovedAt: data.disapproved_at,
+        expectedDate: data.expected_date,
+        createdAt: data.created_at,
+        tenantId: data.tenant_id
+      };
+
+      setTransactions(prev => [newTransaction, ...prev]);
+      toast.success('Transaction created successfully!');
+      console.log('===ADD TRANSACTION FUNCTION COMPLETED===');
+      
+      return { success: true, data: newTransaction };
+    } catch (error) {
+      console.error('Error in addTransaction function:', error);
+      toast.error(`Failed to create transaction: ${error.message}`);
+      throw error;
+    }
+  };
+
+  // User Management Functions
   const addUser = async (userData) => {
     if (!tenant) return;
 
@@ -402,18 +469,16 @@ export const DataProvider = ({ children }) => {
 
   const updateUser = async (id, updates) => {
     try {
-      console.log('Updating user with:', { id, updates });
       const { data, error } = await supabase
         .from('users_central')
         .update(updates)
         .eq('id', id)
-        .eq('tenant_id', tenant.id) // Ensure we only update users from this tenant
+        .eq('tenant_id', tenant.id)
         .select()
         .single();
 
       if (error) throw error;
 
-      console.log('User update response:', data);
       setUsers(prev => prev.map(user => 
         user.id === id ? {
           id: data.id,
@@ -437,7 +502,7 @@ export const DataProvider = ({ children }) => {
         .from('users_central')
         .delete()
         .eq('id', id)
-        .eq('tenant_id', tenant.id); // Ensure we only delete users from this tenant
+        .eq('tenant_id', tenant.id);
 
       if (error) throw error;
 
@@ -449,80 +514,11 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  // Transaction functions with tenant isolation
-  const addTransaction = async (transaction) => {
-    if (!tenant) return;
-
-    try {
-      console.log('===ADD TRANSACTION FUNCTION CALLED===');
-      console.log('Transaction data received:', transaction);
-
-      // Validate required fields
-      if (!transaction.categoryId || !transaction.itemId) {
-        throw new Error('Category and item must be selected');
-      }
-
-      const transactionData = {
-        type: transaction.type,
-        category_id: transaction.categoryId,
-        item_id: transaction.itemId,
-        amount: parseFloat(transaction.amount),
-        description: transaction.description,
-        status: transaction.status,
-        expected_date: transaction.expectedDate || null,
-        official: transaction.official,
-        count: transaction.count,
-        submitted_by: transaction.submittedBy,
-        approval_status: 'pending',
-        attachments: transaction.attachments || [],
-        tenant_id: tenant.id // Add tenant isolation
-      };
-
-      console.log('Submitting transaction with tenant_id:', tenant.id);
-      const { data, error } = await supabase
-        .from('transactions_stf2024')
-        .insert([transactionData])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Supabase error in addTransaction:', error);
-        throw error;
-      }
-
-      console.log('Transaction inserted successfully:', data);
-      const newTransaction = {
-        ...data,
-        id: data.id,
-        categoryId: data.category_id,
-        itemId: data.item_id,
-        submittedBy: data.submitted_by,
-        approvalStatus: data.approval_status,
-        approvedBy: data.approved_by,
-        approvedAt: data.approved_at,
-        disapprovedBy: data.disapproved_by,
-        disapprovedAt: data.disapproved_at,
-        expectedDate: data.expected_date,
-        createdAt: data.created_at,
-        tenantId: data.tenant_id
-      };
-
-      setTransactions(prev => [newTransaction, ...prev]);
-      toast.success('Transaction created successfully!');
-      console.log('===ADD TRANSACTION FUNCTION COMPLETED===');
-    } catch (error) {
-      console.error('Error in addTransaction function:', error);
-      toast.error(`Failed to create transaction: ${error.message}`);
-      throw error;
-    }
-  };
-
   // Category functions with tenant isolation
   const addCategory = async (category) => {
     if (!tenant) return;
 
     try {
-      console.log('===ADD CATEGORY FUNCTION CALLED===');
       console.log('Adding category for tenant:', tenant.id);
 
       const { data, error } = await supabase
@@ -549,7 +545,6 @@ export const DataProvider = ({ children }) => {
 
       setCategories(prev => [...prev, newCategory]);
       toast.success('Category added successfully!');
-      console.log('===ADD CATEGORY FUNCTION COMPLETED===');
     } catch (error) {
       console.error('Error adding category:', error);
       toast.error(`Failed to add category: ${error.message}`);
@@ -560,7 +555,6 @@ export const DataProvider = ({ children }) => {
     if (!tenant) return;
 
     try {
-      console.log('===ADD ITEM FUNCTION CALLED===');
       console.log('Adding item for tenant:', tenant.id);
 
       const { data, error } = await supabase
@@ -587,14 +581,13 @@ export const DataProvider = ({ children }) => {
 
       setItems(prev => [...prev, newItem]);
       toast.success('Item added successfully!');
-      console.log('===ADD ITEM FUNCTION COMPLETED===');
     } catch (error) {
       console.error('Error adding item:', error);
       toast.error(`Failed to add item: ${error.message}`);
     }
   };
 
-  // Simplified implementations for other CRUD operations
+  // Other CRUD operations with tenant isolation
   const updateTransaction = async (id, updates) => {
     if (!tenant) return;
     
@@ -659,7 +652,6 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  // Other CRUD operations (simplified)
   const updateCategory = async (id, updates) => {
     if (!tenant) return;
     

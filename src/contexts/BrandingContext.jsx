@@ -23,9 +23,34 @@ export const BrandingProvider = ({ children }) => {
   });
   const [loading, setLoading] = useState(true);
 
+  // Check if tenant_id column exists in app_settings table
+  const ensureAppSettingsColumn = async () => {
+    try {
+      const { error } = await supabase
+        .from('app_settings_stf2024')
+        .select('tenant_id')
+        .limit(1);
+
+      if (error && error.message.includes('does not exist')) {
+        console.log('tenant_id column does not exist in app_settings_stf2024');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.log('Tenant column check failed for app_settings_stf2024:', error);
+      return false;
+    }
+  };
+
   // Fetch branding settings with tenant isolation
   const fetchBranding = async () => {
     if (!user || user.role === 'superadmin') {
+      setBranding({
+        appTitle: 'Soccer Team Finance',
+        appSubtitle: 'Multi-Tenant Management System',
+        logoUrl: null,
+        logoFileName: null
+      });
       setLoading(false);
       return;
     }
@@ -46,50 +71,39 @@ export const BrandingProvider = ({ children }) => {
       setLoading(true);
       console.log('Fetching branding settings for tenant:', tenant.id);
 
-      // Add tenant_id column to app_settings table if it doesn't exist
-      await supabase.rpc('add_tenant_column_if_not_exists', {
-        table_name: 'app_settings_stf2024',
-        tenant_id: tenant.id
-      }).catch(() => {
-        // Column might already exist, continue
-      });
+      const hasTenantColumn = await ensureAppSettingsColumn();
 
-      // Try to get existing settings for this tenant
-      const { data, error } = await supabase
+      let settingsQuery = supabase
         .from('app_settings_stf2024')
         .select('*')
-        .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false })
         .limit(1);
 
-      if (error && error.details?.includes('tenant_id')) {
-        // If tenant_id column doesn't exist, get all settings
-        console.log('Tenant column not found, using default branding');
-        setBranding({
-          appTitle: tenant.name || 'Soccer Team Finance',
-          appSubtitle: 'Financial Management System',
-          logoUrl: null,
-          logoFileName: null
-        });
-      } else if (error) {
+      if (hasTenantColumn) {
+        settingsQuery = settingsQuery.eq('tenant_id', tenant.id);
+      }
+
+      const { data, error } = await settingsQuery;
+
+      if (error) {
         console.error('Error fetching branding:', error);
         throw error;
+      }
+
+      console.log('Branding data fetched:', data);
+      if (data && data.length > 0) {
+        const settings = data[0];
+        const newBranding = {
+          appTitle: settings.app_title || tenant.name || 'Soccer Team Finance',
+          appSubtitle: settings.app_subtitle || 'Financial Management System',
+          logoUrl: settings.logo_url,
+          logoFileName: settings.logo_file_name
+        };
+        console.log('Setting branding to:', newBranding);
+        setBranding(newBranding);
       } else {
-        console.log('Branding data fetched:', data);
-        if (data && data.length > 0) {
-          const settings = data[0];
-          const newBranding = {
-            appTitle: settings.app_title || tenant.name || 'Soccer Team Finance',
-            appSubtitle: settings.app_subtitle || 'Financial Management System',
-            logoUrl: settings.logo_url,
-            logoFileName: settings.logo_file_name
-          };
-          console.log('Setting branding to:', newBranding);
-          setBranding(newBranding);
-        } else {
-          console.log('No branding data found, creating default...');
-          await createDefaultSettings();
-        }
+        console.log('No branding data found, creating default...');
+        await createDefaultSettings();
       }
     } catch (error) {
       console.error('Error in fetchBranding:', error);
@@ -112,15 +126,22 @@ export const BrandingProvider = ({ children }) => {
     try {
       console.log('Creating default settings for tenant:', tenant.id);
 
+      const hasTenantColumn = await ensureAppSettingsColumn();
+      
+      const settingsData = {
+        app_title: tenant.name || 'Soccer Team Finance',
+        app_subtitle: 'Financial Management System',
+        logo_url: null,
+        logo_file_name: null
+      };
+
+      if (hasTenantColumn) {
+        settingsData.tenant_id = tenant.id;
+      }
+
       const { data, error } = await supabase
         .from('app_settings_stf2024')
-        .insert({
-          app_title: tenant.name || 'Soccer Team Finance',
-          app_subtitle: 'Financial Management System',
-          logo_url: null,
-          logo_file_name: null,
-          tenant_id: tenant.id
-        })
+        .insert(settingsData)
         .select()
         .single();
 
@@ -144,6 +165,12 @@ export const BrandingProvider = ({ children }) => {
       });
     } catch (error) {
       console.error('Error creating default settings:', error);
+      setBranding({
+        appTitle: tenant?.name || 'Soccer Team Finance',
+        appSubtitle: 'Financial Management System',
+        logoUrl: null,
+        logoFileName: null
+      });
     }
   };
 
@@ -154,28 +181,46 @@ export const BrandingProvider = ({ children }) => {
     try {
       console.log('Updating branding for tenant:', tenant.id, 'with:', updates);
 
+      const hasTenantColumn = await ensureAppSettingsColumn();
+
       // Get the current record ID for this tenant
-      const { data: existingData } = await supabase
+      let existingQuery = supabase
         .from('app_settings_stf2024')
         .select('id')
-        .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false })
         .limit(1);
 
+      if (hasTenantColumn) {
+        existingQuery = existingQuery.eq('tenant_id', tenant.id);
+      }
+
+      const { data: existingData } = await existingQuery;
+
       let result;
+      const updateData = {
+        app_title: updates.appTitle !== undefined ? updates.appTitle : branding.appTitle,
+        app_subtitle: updates.appSubtitle !== undefined ? updates.appSubtitle : branding.appSubtitle,
+        logo_url: updates.logoUrl !== undefined ? updates.logoUrl : branding.logoUrl,
+        logo_file_name: updates.logoFileName !== undefined ? updates.logoFileName : branding.logoFileName,
+        updated_at: new Date().toISOString()
+      };
+
+      if (hasTenantColumn) {
+        updateData.tenant_id = tenant.id;
+      }
+
       if (existingData && existingData.length > 0) {
         // Update existing record
-        const { data, error } = await supabase
+        let updateQuery = supabase
           .from('app_settings_stf2024')
-          .update({
-            app_title: updates.appTitle !== undefined ? updates.appTitle : branding.appTitle,
-            app_subtitle: updates.appSubtitle !== undefined ? updates.appSubtitle : branding.appSubtitle,
-            logo_url: updates.logoUrl !== undefined ? updates.logoUrl : branding.logoUrl,
-            logo_file_name: updates.logoFileName !== undefined ? updates.logoFileName : branding.logoFileName,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingData[0].id)
-          .eq('tenant_id', tenant.id)
+          .update(updateData)
+          .eq('id', existingData[0].id);
+
+        if (hasTenantColumn) {
+          updateQuery = updateQuery.eq('tenant_id', tenant.id);
+        }
+
+        const { data, error } = await updateQuery
           .select()
           .single();
 
@@ -183,15 +228,11 @@ export const BrandingProvider = ({ children }) => {
         result = data;
       } else {
         // Insert new record
+        delete updateData.updated_at; // Remove updated_at for insert
+        
         const { data, error } = await supabase
           .from('app_settings_stf2024')
-          .insert({
-            app_title: updates.appTitle || branding.appTitle,
-            app_subtitle: updates.appSubtitle || branding.appSubtitle,
-            logo_url: updates.logoUrl || branding.logoUrl,
-            logo_file_name: updates.logoFileName || branding.logoFileName,
-            tenant_id: tenant.id
-          })
+          .insert(updateData)
           .select()
           .single();
 
@@ -200,13 +241,15 @@ export const BrandingProvider = ({ children }) => {
       }
 
       console.log('Branding update result:', result);
-      // Update local state
+      
+      // Update local state immediately
       const newBranding = {
         appTitle: result.app_title,
         appSubtitle: result.app_subtitle,
         logoUrl: result.logo_url,
         logoFileName: result.logo_file_name
       };
+      
       console.log('Setting new branding state:', newBranding);
       setBranding(newBranding);
 
@@ -219,21 +262,34 @@ export const BrandingProvider = ({ children }) => {
     }
   };
 
-  // Upload logo file with tenant-specific storage
+  // FIXED: Upload logo file with proper error handling
   const uploadLogo = async (file) => {
     if (!tenant) return { success: false, error: 'No tenant information' };
 
     try {
       console.log('Starting logo upload for tenant:', tenant.name);
+      
+      // Show loading toast
+      const uploadToast = toast.loading('Uploading logo...');
 
       // Validate file type
       if (!file.type.startsWith('image/')) {
+        toast.dismiss(uploadToast);
         throw new Error('Please select an image file');
       }
 
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
+        toast.dismiss(uploadToast);
         throw new Error('File size must be less than 5MB');
+      }
+
+      // Remove old logo if exists
+      if (branding.logoFileName) {
+        console.log('Removing old logo:', branding.logoFileName);
+        await supabase.storage
+          .from('app-logos')
+          .remove([branding.logoFileName]);
       }
 
       // Create tenant-specific filename
@@ -251,6 +307,7 @@ export const BrandingProvider = ({ children }) => {
 
       if (uploadError) {
         console.error('Storage upload error:', uploadError);
+        toast.dismiss(uploadToast);
         throw uploadError;
       }
 
@@ -270,8 +327,16 @@ export const BrandingProvider = ({ children }) => {
         logoFileName: fileName
       });
 
+      toast.dismiss(uploadToast);
+
       if (result.success) {
         toast.success('Logo uploaded successfully!');
+        
+        // Force a refresh of the branding state
+        setTimeout(() => {
+          fetchBranding();
+        }, 1000);
+        
         return { success: true, logoUrl };
       }
       return result;
@@ -282,12 +347,14 @@ export const BrandingProvider = ({ children }) => {
     }
   };
 
-  // Remove logo with tenant isolation
+  // FIXED: Remove logo with proper cleanup
   const removeLogo = async () => {
     if (!tenant) return { success: false, error: 'No tenant information' };
 
     try {
       console.log('Removing logo...', branding.logoFileName);
+      
+      const removeToast = toast.loading('Removing logo...');
 
       // Delete from storage if exists
       if (branding.logoFileName) {
@@ -307,8 +374,15 @@ export const BrandingProvider = ({ children }) => {
         logoFileName: null
       });
 
+      toast.dismiss(removeToast);
+
       if (result.success) {
         toast.success('Logo removed successfully!');
+        
+        // Force a refresh of the branding state
+        setTimeout(() => {
+          fetchBranding();
+        }, 500);
       }
       return result;
     } catch (error) {
