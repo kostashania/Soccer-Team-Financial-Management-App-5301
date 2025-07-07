@@ -15,12 +15,54 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingPackage, setEditingPackage] = useState(null);
+  const [isCreating, setIsCreating] = useState(false);
 
   const createForm = useForm();
   const editForm = useForm();
 
-  const handleCreatePackage = async (data) => {
+  // Check if table exists and create it if needed
+  const ensurePackagesTable = async () => {
     try {
+      console.log('Checking if subscription_packages table exists...');
+      
+      // First, try to select from the table to see if it exists
+      const { data, error } = await supabase
+        .from('subscription_packages')
+        .select('id')
+        .limit(1);
+
+      if (error && error.message.includes('does not exist')) {
+        console.log('Table does not exist, creating it...');
+        
+        // Create the table using RPC function or direct SQL
+        const { error: createError } = await supabase.rpc('create_packages_table', {});
+        
+        if (createError) {
+          // If RPC doesn't work, we'll use a different approach
+          console.log('RPC failed, trying direct table creation...');
+          throw new Error('Table creation failed. Please contact administrator.');
+        }
+        
+        console.log('Table created successfully');
+        return true;
+      } else if (error) {
+        console.error('Error checking table:', error);
+        throw error;
+      }
+      
+      console.log('Table exists');
+      return true;
+    } catch (error) {
+      console.error('Error ensuring table exists:', error);
+      throw error;
+    }
+  };
+
+  const handleCreatePackage = async (data) => {
+    if (isCreating) return;
+    
+    try {
+      setIsCreating(true);
       console.log('Creating package with data:', data);
       
       // Validate required fields
@@ -28,38 +70,73 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
         throw new Error('Name, price, and duration are required');
       }
 
+      // Ensure table exists first
+      await ensurePackagesTable();
+
       const packageData = {
-        name: data.name,
-        description: data.description || null,
+        name: data.name.trim(),
+        description: data.description?.trim() || null,
         price: parseFloat(data.price),
         duration_months: parseInt(data.duration_months),
         max_users: data.max_users ? parseInt(data.max_users) : null,
-        features: data.features ? data.features.split('\n').filter(f => f.trim()) : [],
-        active: data.active !== false // Default to true if not specified
+        features: data.features ? 
+          data.features.split('\n')
+            .map(f => f.trim())
+            .filter(f => f.length > 0) : 
+          [],
+        active: data.active !== false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
       console.log('Inserting package data:', packageData);
 
+      // Try the insert operation
       const { data: result, error } = await supabase
         .from('subscription_packages')
-        .insert(packageData)
+        .insert([packageData])
         .select()
         .single();
 
       if (error) {
-        console.error('Supabase error:', error);
-        throw new Error(error.message || 'Database error occurred');
+        console.error('Supabase error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        
+        // Provide more specific error messages based on the error
+        if (error.message.includes('does not exist')) {
+          throw new Error('Database table not found. Please ensure the subscription_packages table is created.');
+        } else if (error.message.includes('permission')) {
+          throw new Error('Permission denied. Please check your database permissions.');
+        } else if (error.message.includes('duplicate')) {
+          throw new Error('A package with this name already exists.');
+        } else {
+          throw new Error(error.message || 'Database error occurred');
+        }
+      }
+
+      if (!result) {
+        throw new Error('No data returned from package creation');
       }
 
       console.log('Package created successfully:', result);
 
+      // Refresh the packages list
       await onPackagesChange();
+      
+      // Close modal and reset form
       setShowCreateModal(false);
       createForm.reset();
+      
       toast.success('Package created successfully!');
     } catch (error) {
       console.error('Error creating package:', error);
       toast.error(`Failed to create package: ${error.message}`);
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -67,13 +144,18 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
     if (!editingPackage) return;
     try {
       const packageData = {
-        name: data.name,
-        description: data.description || null,
+        name: data.name.trim(),
+        description: data.description?.trim() || null,
         price: parseFloat(data.price),
         duration_months: parseInt(data.duration_months),
         max_users: data.max_users ? parseInt(data.max_users) : null,
-        features: data.features ? data.features.split('\n').filter(f => f.trim()) : [],
-        active: data.active
+        features: data.features ? 
+          data.features.split('\n')
+            .map(f => f.trim())
+            .filter(f => f.length > 0) : 
+          [],
+        active: data.active,
+        updated_at: new Date().toISOString()
       };
 
       const { error } = await supabase
@@ -81,7 +163,10 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
         .update(packageData)
         .eq('id', editingPackage.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Update error:', error);
+        throw new Error(error.message || 'Failed to update package');
+      }
 
       await onPackagesChange();
       setShowEditModal(false);
@@ -104,7 +189,10 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
         .delete()
         .eq('id', packageId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Delete error:', error);
+        throw new Error(error.message || 'Failed to delete package');
+      }
 
       await onPackagesChange();
       toast.success('Package deleted successfully!');
@@ -118,10 +206,16 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
     try {
       const { error } = await supabase
         .from('subscription_packages')
-        .update({ active: !currentActive })
+        .update({ 
+          active: !currentActive,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', packageId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Toggle error:', error);
+        throw new Error(error.message || 'Failed to update package status');
+      }
 
       await onPackagesChange();
       toast.success(`Package ${!currentActive ? 'activated' : 'deactivated'} successfully!`);
@@ -135,11 +229,11 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
     setEditingPackage(pkg);
     editForm.reset({
       name: pkg.name,
-      description: pkg.description,
+      description: pkg.description || '',
       price: pkg.price,
       duration_months: pkg.duration_months,
-      max_users: pkg.max_users,
-      features: pkg.features ? pkg.features.join('\n') : '',
+      max_users: pkg.max_users || '',
+      features: Array.isArray(pkg.features) ? pkg.features.join('\n') : '',
       active: pkg.active
     });
     setShowEditModal(true);
@@ -157,7 +251,11 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-900">Create New Package</h2>
-            <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600">
+            <button 
+              onClick={() => setShowCreateModal(false)} 
+              className="text-gray-400 hover:text-gray-600"
+              disabled={isCreating}
+            >
               <SafeIcon icon={FiX} className="w-6 h-6" />
             </button>
           </div>
@@ -168,25 +266,38 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
               </label>
               <input 
                 type="text" 
-                {...createForm.register('name', { required: 'Package name is required' })}
+                {...createForm.register('name', { 
+                  required: 'Package name is required',
+                  minLength: { value: 2, message: 'Name must be at least 2 characters' },
+                  maxLength: { value: 100, message: 'Name must be less than 100 characters' }
+                })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Basic Plan"
+                disabled={isCreating}
               />
               {createForm.formState.errors.name && (
                 <p className="mt-1 text-sm text-red-600">{createForm.formState.errors.name.message}</p>
               )}
             </div>
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Description
               </label>
               <textarea 
-                {...createForm.register('description')}
+                {...createForm.register('description', {
+                  maxLength: { value: 500, message: 'Description must be less than 500 characters' }
+                })}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Package description..."
+                disabled={isCreating}
               />
+              {createForm.formState.errors.description && (
+                <p className="mt-1 text-sm text-red-600">{createForm.formState.errors.description.message}</p>
+              )}
             </div>
+            
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -195,9 +306,15 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
                 <input 
                   type="number" 
                   step="0.01"
-                  {...createForm.register('price', { required: 'Price is required', min: 0 })}
+                  min="0"
+                  {...createForm.register('price', { 
+                    required: 'Price is required', 
+                    min: { value: 0, message: 'Price must be positive' },
+                    max: { value: 9999, message: 'Price must be less than €9999' }
+                  })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="50.00"
+                  disabled={isCreating}
                 />
                 {createForm.formState.errors.price && (
                   <p className="mt-1 text-sm text-red-600">{createForm.formState.errors.price.message}</p>
@@ -209,26 +326,42 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
                 </label>
                 <input 
                   type="number" 
-                  {...createForm.register('duration_months', { required: 'Duration is required', min: 1 })}
+                  min="1"
+                  max="60"
+                  {...createForm.register('duration_months', { 
+                    required: 'Duration is required', 
+                    min: { value: 1, message: 'Duration must be at least 1 month' },
+                    max: { value: 60, message: 'Duration must be less than 60 months' }
+                  })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="12"
+                  disabled={isCreating}
                 />
                 {createForm.formState.errors.duration_months && (
                   <p className="mt-1 text-sm text-red-600">{createForm.formState.errors.duration_months.message}</p>
                 )}
               </div>
             </div>
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Max Users (Optional)
               </label>
               <input 
                 type="number" 
-                {...createForm.register('max_users', { min: 1 })}
+                min="1"
+                {...createForm.register('max_users', { 
+                  min: { value: 1, message: 'Max users must be at least 1' } 
+                })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="10 (leave empty for unlimited)"
+                disabled={isCreating}
               />
+              {createForm.formState.errors.max_users && (
+                <p className="mt-1 text-sm text-red-600">{createForm.formState.errors.max_users.message}</p>
+              )}
             </div>
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Features (One per line)
@@ -238,8 +371,10 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
                 rows={4}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Financial tracking&#10;User management&#10;Email support&#10;Basic reports"
+                disabled={isCreating}
               />
             </div>
+            
             <div className="flex items-center">
               <input 
                 type="checkbox" 
@@ -247,17 +382,27 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
                 {...createForm.register('active')}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 defaultChecked
+                disabled={isCreating}
               />
               <label htmlFor="active" className="ml-2 block text-sm text-gray-900">
                 Active
               </label>
             </div>
+            
             <div className="flex justify-end pt-4">
               <button 
                 type="submit" 
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                disabled={isCreating}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Create Package
+                {isCreating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  'Create Package'
+                )}
               </button>
             </div>
           </form>
@@ -290,23 +435,31 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
                 </label>
                 <input 
                   type="text" 
-                  {...editForm.register('name', { required: 'Package name is required' })}
+                  {...editForm.register('name', { 
+                    required: 'Package name is required',
+                    minLength: { value: 2, message: 'Name must be at least 2 characters' },
+                    maxLength: { value: 100, message: 'Name must be less than 100 characters' }
+                  })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 {editForm.formState.errors.name && (
                   <p className="mt-1 text-sm text-red-600">{editForm.formState.errors.name.message}</p>
                 )}
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Description
                 </label>
                 <textarea 
-                  {...editForm.register('description')}
+                  {...editForm.register('description', {
+                    maxLength: { value: 500, message: 'Description must be less than 500 characters' }
+                  })}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -315,7 +468,12 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
                   <input 
                     type="number" 
                     step="0.01"
-                    {...editForm.register('price', { required: 'Price is required', min: 0 })}
+                    min="0"
+                    {...editForm.register('price', { 
+                      required: 'Price is required', 
+                      min: { value: 0, message: 'Price must be positive' },
+                      max: { value: 9999, message: 'Price must be less than €9999' }
+                    })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   {editForm.formState.errors.price && (
@@ -328,7 +486,13 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
                   </label>
                   <input 
                     type="number" 
-                    {...editForm.register('duration_months', { required: 'Duration is required', min: 1 })}
+                    min="1"
+                    max="60"
+                    {...editForm.register('duration_months', { 
+                      required: 'Duration is required', 
+                      min: { value: 1, message: 'Duration must be at least 1 month' },
+                      max: { value: 60, message: 'Duration must be less than 60 months' }
+                    })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   {editForm.formState.errors.duration_months && (
@@ -336,17 +500,22 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
                   )}
                 </div>
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Max Users (Optional)
                 </label>
                 <input 
                   type="number" 
-                  {...editForm.register('max_users', { min: 1 })}
+                  min="1"
+                  {...editForm.register('max_users', { 
+                    min: { value: 1, message: 'Max users must be at least 1' } 
+                  })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Leave empty for unlimited"
                 />
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Features (One per line)
@@ -357,6 +526,7 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+              
               <div className="flex items-center">
                 <input 
                   type="checkbox" 
@@ -368,6 +538,7 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
                   Active
                 </label>
               </div>
+              
               <div className="flex justify-end pt-4">
                 <button 
                   type="submit" 
@@ -394,6 +565,19 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
           <SafeIcon icon={FiPlus} className="w-4 h-4 mr-2" />
           Create Package
         </button>
+      </div>
+
+      {/* Database Status Check */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center">
+          <SafeIcon icon={FiPackage} className="w-5 h-5 text-blue-600 mr-2" />
+          <div>
+            <p className="text-sm font-medium text-blue-900">Package Management Status</p>
+            <p className="text-xs text-blue-700">
+              {packages.length} packages loaded. If you encounter database errors, the subscription_packages table may need to be created.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Packages Grid */}
@@ -442,7 +626,7 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
                 )}
               </div>
 
-              {pkg.features && pkg.features.length > 0 && (
+              {pkg.features && Array.isArray(pkg.features) && pkg.features.length > 0 && (
                 <div className="mb-4">
                   <h5 className="text-sm font-medium text-gray-900 mb-2">Features:</h5>
                   <ul className="space-y-1">
@@ -486,6 +670,9 @@ const PackageManagement = ({ packages, onPackagesChange }) => {
         <div className="text-center py-12">
           <SafeIcon icon={FiPackage} className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600 mb-4">No subscription packages found</p>
+          <p className="text-sm text-gray-500 mb-4">
+            The subscription_packages table may not exist in your database.
+          </p>
           <button 
             onClick={() => setShowCreateModal(true)}
             className="text-blue-600 hover:text-blue-800"
