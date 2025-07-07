@@ -18,7 +18,8 @@ const {
   FiInfo, FiDatabase, FiServer, FiKey, FiShield, FiCode, FiLayers, FiGitBranch,
   FiCpu, FiHardDrive, FiWifi, FiLock, FiFileText, FiMonitor, FiActivity,
   FiCreditCard, FiPercent, FiTrendingUp, FiTrendingDown, FiBarChart3, FiGift,
-  FiToggleLeft, FiToggleRight, FiRefreshCw, FiCheckCircle, FiTag, FiPackage
+  FiToggleLeft, FiToggleRight, FiRefreshCw, FiCheckCircle, FiTag, FiPackage,
+  FiUpload, FiImage, FiType
 } = FiIcons;
 
 const SuperAdminDashboard = () => {
@@ -487,8 +488,242 @@ const SuperAdminDashboard = () => {
     return endDate <= thirtyDaysFromNow && t.active;
   }).length;
 
-  // Modal components would go here (CreateTenantModal, EditTenantModal, etc.)
-  // For brevity, I'll include just the key modals
+  // Create Tenant Modal
+  const CreateTenantModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <motion.div 
+        className="bg-white rounded-lg max-w-md w-full p-6"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Create New Tenant</h2>
+          <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600">
+            <SafeIcon icon={FiX} className="w-6 h-6" />
+          </button>
+        </div>
+        <form onSubmit={createForm.handleSubmit(handleCreateTenant)} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tenant Name *</label>
+            <input 
+              type="text" 
+              {...createForm.register('name', { required: 'Tenant name is required' })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="My Soccer Team"
+            />
+            {createForm.formState.errors.name && (
+              <p className="mt-1 text-sm text-red-600">{createForm.formState.errors.name.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Domain *</label>
+            <input 
+              type="text" 
+              {...createForm.register('domain', { required: 'Domain is required' })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="mysoccerteam.com"
+            />
+            {createForm.formState.errors.domain && (
+              <p className="mt-1 text-sm text-red-600">{createForm.formState.errors.domain.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Admin Email *</label>
+            <input 
+              type="email" 
+              {...createForm.register('adminEmail', { required: 'Admin email is required' })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="admin@mysoccerteam.com"
+            />
+            {createForm.formState.errors.adminEmail && (
+              <p className="mt-1 text-sm text-red-600">{createForm.formState.errors.adminEmail.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Admin Password *</label>
+            <input 
+              type="password" 
+              {...createForm.register('adminPassword', { required: 'Admin password is required' })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter admin password"
+            />
+            {createForm.formState.errors.adminPassword && (
+              <p className="mt-1 text-sm text-red-600">{createForm.formState.errors.adminPassword.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Plan</label>
+            <select {...createForm.register('plan')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="basic">Basic</option>
+              <option value="premium">Premium</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Subscription Months</label>
+            <input 
+              type="number" 
+              {...createForm.register('subscriptionMonths')} 
+              defaultValue={12}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex justify-end pt-4">
+            <button 
+              type="submit" 
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Create Tenant
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+
+  // Edit Tenant Modal
+  const EditTenantModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <motion.div 
+        className="bg-white rounded-lg max-w-md w-full p-6"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Edit Tenant</h2>
+          <button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-gray-600">
+            <SafeIcon icon={FiX} className="w-6 h-6" />
+          </button>
+        </div>
+        {editingTenant && (
+          <form onSubmit={editForm.handleSubmit(handleEditTenant)} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tenant Name *</label>
+              <input 
+                type="text" 
+                {...editForm.register('name', { required: 'Tenant name is required' })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Domain *</label>
+              <input 
+                type="text" 
+                {...editForm.register('domain', { required: 'Domain is required' })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Plan</label>
+              <select {...editForm.register('plan')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="basic">Basic</option>
+                <option value="premium">Premium</option>
+              </select>
+            </div>
+            <div className="flex items-center">
+              <input 
+                type="checkbox" 
+                {...editForm.register('active')}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label className="ml-2 block text-sm text-gray-900">Active</label>
+            </div>
+            <div className="flex justify-end pt-4">
+              <button 
+                type="submit" 
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Update Tenant
+              </button>
+            </div>
+          </form>
+        )}
+      </motion.div>
+    </div>
+  );
+
+  // Create User Global Modal
+  const CreateUserGlobalModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <motion.div 
+        className="bg-white rounded-lg max-w-md w-full p-6"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Create New User</h2>
+          <button onClick={() => setShowCreateUserGlobalModal(false)} className="text-gray-400 hover:text-gray-600">
+            <SafeIcon icon={FiX} className="w-6 h-6" />
+          </button>
+        </div>
+        <form onSubmit={createUserGlobalForm.handleSubmit(handleCreateUser)} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tenant</label>
+            <select {...createUserGlobalForm.register('tenant_id')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">Select Tenant (optional for superadmin)</option>
+              {tenants.map(tenant => (
+                <option key={tenant.id} value={tenant.id}>{tenant.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+            <input 
+              type="text" 
+              {...createUserGlobalForm.register('name', { required: 'Name is required' })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+            <input 
+              type="email" 
+              {...createUserGlobalForm.register('email', { required: 'Email is required' })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+            <select {...createUserGlobalForm.register('role', { required: 'Role is required' })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">Select Role</option>
+              <option value="superadmin">Super Admin</option>
+              <option value="admin">Admin</option>
+              <option value="board">Board Member</option>
+              <option value="cashier">Cashier</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+            <input 
+              type="password" 
+              {...createUserGlobalForm.register('password', { required: 'Password is required' })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              defaultValue="password"
+            />
+          </div>
+          <div className="flex items-center">
+            <input 
+              type="checkbox" 
+              {...createUserGlobalForm.register('active')}
+              defaultChecked
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label className="ml-2 block text-sm text-gray-900">Active</label>
+          </div>
+          <div className="flex justify-end pt-4">
+            <button 
+              type="submit" 
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Create User
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -596,6 +831,207 @@ const SuperAdminDashboard = () => {
           </nav>
         </div>
 
+        {/* Tenant Management Tab */}
+        {activeTab === 'tenants' && (
+          <motion.div 
+            className="space-y-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">Tenant Management</h2>
+              <button 
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <SafeIcon icon={FiPlus} className="w-4 h-4 mr-2" />
+                Create Tenant
+              </button>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tenant</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {tenants.map((tenant) => (
+                      <tr key={tenant.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{tenant.name}</div>
+                          <div className="text-sm text-gray-500">{tenant.domain}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            tenant.plan === 'premium' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {tenant.plan}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <button 
+                            onClick={() => handleToggleTenantStatus(tenant)}
+                            className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              tenant.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {tenant.active ? 'Active' : 'Inactive'}
+                          </button>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {tenant.created_at ? format(new Date(tenant.created_at), 'MMM d, yyyy') : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button 
+                            onClick={() => openEditModal(tenant)}
+                            className="text-blue-600 hover:text-blue-900 mr-3"
+                            title="Edit Tenant"
+                          >
+                            <SafeIcon icon={FiEdit3} className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => openCreateUserModal(tenant)}
+                            className="text-green-600 hover:text-green-900"
+                            title="Create User"
+                          >
+                            <SafeIcon icon={FiUserPlus} className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* User Management Tab */}
+        {activeTab === 'users' && (
+          <motion.div 
+            className="space-y-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">User Management</h2>
+              <button 
+                onClick={() => setShowCreateUserGlobalModal(true)}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <SafeIcon icon={FiPlus} className="w-4 h-4 mr-2" />
+                Create User
+              </button>
+            </div>
+
+            {/* User Filters */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <select 
+                  value={userFilter.tenant} 
+                  onChange={(e) => setUserFilter({...userFilter, tenant: e.target.value})}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Tenants</option>
+                  {tenants.map(tenant => (
+                    <option key={tenant.id} value={tenant.id}>{tenant.name}</option>
+                  ))}
+                </select>
+                <select 
+                  value={userFilter.role} 
+                  onChange={(e) => setUserFilter({...userFilter, role: e.target.value})}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Roles</option>
+                  <option value="superadmin">Super Admin</option>
+                  <option value="admin">Admin</option>
+                  <option value="board">Board Member</option>
+                  <option value="cashier">Cashier</option>
+                </select>
+                <select 
+                  value={userFilter.status} 
+                  onChange={(e) => setUserFilter({...userFilter, status: e.target.value})}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Status</option>
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tenant</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredUsers.map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                          <div className="text-sm text-gray-500">{user.email}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.tenant?.name || 'Global'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            user.role === 'superadmin' ? 'bg-red-100 text-red-800' :
+                            user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                            user.role === 'board' ? 'bg-blue-100 text-blue-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {user.active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button 
+                            onClick={() => openEditUserModal(user)}
+                            className="text-blue-600 hover:text-blue-900 mr-3"
+                            title="Edit User"
+                          >
+                            <SafeIcon icon={FiEdit3} className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="text-red-600 hover:text-red-900"
+                            title="Delete User"
+                          >
+                            <SafeIcon icon={FiTrash2} className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Package Management Tab */}
         {activeTab === 'packages' && (
           <motion.div 
@@ -680,8 +1116,166 @@ const SuperAdminDashboard = () => {
           </motion.div>
         )}
 
-        {/* Other tabs would go here... */}
-        {/* For brevity, I'm showing just the key new tabs */}
+        {/* Global Settings Tab */}
+        {activeTab === 'global' && (
+          <motion.div 
+            className="space-y-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Global Settings</h2>
+              <form onSubmit={settingsForm.handleSubmit(handleUpdateGlobalSettings)} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">App Title</label>
+                    <input 
+                      type="text" 
+                      {...settingsForm.register('app_title')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Soccer Team Finance"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">App Subtitle</label>
+                    <input 
+                      type="text" 
+                      {...settingsForm.register('app_subtitle')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Multi-Tenant Financial Management"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Main Text</label>
+                  <textarea 
+                    {...settingsForm.register('text')}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Welcome message for the homepage"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Primary Button Text</label>
+                    <input 
+                      type="text" 
+                      {...settingsForm.register('button')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Get Started"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Primary Button URL</label>
+                    <input 
+                      type="text" 
+                      {...settingsForm.register('button_url')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="#"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button 
+                    type="submit" 
+                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    <SafeIcon icon={FiSave} className="w-4 h-4 mr-2" />
+                    Save Settings
+                  </button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+        )}
+
+        {/* System Info Tab */}
+        {activeTab === 'info' && (
+          <motion.div 
+            className="space-y-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Database Info */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center mb-4">
+                  <SafeIcon icon={FiDatabase} className="w-6 h-6 text-blue-600 mr-3" />
+                  <h3 className="text-lg font-semibold text-gray-900">Database Information</h3>
+                </div>
+                {dbInfo && (
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Provider:</span>
+                      <span className="font-medium">Supabase</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Project ID:</span>
+                      <span className="font-medium">{dbInfo.project_id}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Schema:</span>
+                      <span className="font-medium">{dbInfo.schema}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Tables:</span>
+                      <span className="font-medium">{dbInfo.tables.length}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* System Stats */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center mb-4">
+                  <SafeIcon icon={FiActivity} className="w-6 h-6 text-green-600 mr-3" />
+                  <h3 className="text-lg font-semibold text-gray-900">System Statistics</h3>
+                </div>
+                {systemInfo && (
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Environment:</span>
+                      <span className="font-medium">{systemInfo.environment.nodeEnv}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Build Time:</span>
+                      <span className="font-medium">{new Date(systemInfo.environment.buildTime).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Database Type:</span>
+                      <span className="font-medium">{systemInfo.database.type}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Table Statistics */}
+            {systemInfo && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center mb-4">
+                  <SafeIcon icon={FiBarChart3} className="w-6 h-6 text-purple-600 mr-3" />
+                  <h3 className="text-lg font-semibold text-gray-900">Table Statistics</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {Object.entries(systemInfo.tableStats).map(([table, count]) => (
+                    <div key={table} className="bg-gray-50 rounded-lg p-4">
+                      <div className="text-sm font-medium text-gray-900">{table}</div>
+                      <div className="text-lg font-bold text-blue-600">{count}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Modals */}
+        {showCreateModal && <CreateTenantModal />}
+        {showEditModal && <EditTenantModal />}
+        {showCreateUserGlobalModal && <CreateUserGlobalModal />}
         
         {/* Custom Subscription Modal */}
         <CustomSubscriptionModal
