@@ -9,7 +9,7 @@ import PaymentModal from './PaymentModal';
 
 const { 
   FiCalendar, FiDollarSign, FiPackage, FiCreditCard, FiAlertTriangle, 
-  FiCheckCircle, FiClock, FiX, FiShoppingCart, FiInfo, FiRefreshCw,
+  FiCheckCircle, FiClock, FiX, FiShoppingCart, FiInfo, FiRefreshCw, 
   FiUsers, FiStar, FiZap
 } = FiIcons;
 
@@ -19,8 +19,8 @@ const SubscriptionDashboard = () => {
     currentSubscription, 
     subscriptionHistory, 
     packages, 
-    loading,
-    createSubscription,
+    loading, 
+    createSubscription, 
     processPayment,
     isExpiringSoon,
     isExpired,
@@ -78,7 +78,7 @@ const SubscriptionDashboard = () => {
     <div className="space-y-6">
       {/* Subscription Status Alert */}
       {expired && (
-        <motion.div
+        <motion.div 
           className="bg-red-50 border border-red-200 rounded-lg p-4"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -96,7 +96,7 @@ const SubscriptionDashboard = () => {
       )}
 
       {expiringSoon && !expired && (
-        <motion.div
+        <motion.div 
           className="bg-yellow-50 border border-yellow-200 rounded-lg p-4"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -114,7 +114,7 @@ const SubscriptionDashboard = () => {
       )}
 
       {/* Current Subscription */}
-      <motion.div
+      <motion.div 
         className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -125,8 +125,8 @@ const SubscriptionDashboard = () => {
             <h2 className="text-xl font-bold text-gray-900">Current Subscription</h2>
             <p className="text-gray-600 mt-1">Manage your subscription and billing</p>
           </div>
-          <button
-            onClick={() => setShowPackages(!showPackages)}
+          <button 
+            onClick={() => setShowPackages(!showPackages)} 
             className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             <SafeIcon icon={FiShoppingCart} className="w-4 h-4 mr-2" />
@@ -148,7 +148,6 @@ const SubscriptionDashboard = () => {
                   </span>
                 )}
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Status</label>
                 <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(currentSubscription.status)}`}>
@@ -167,7 +166,6 @@ const SubscriptionDashboard = () => {
                   for {currentSubscription.duration_months} month{currentSubscription.duration_months > 1 ? 's' : ''}
                 </p>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Payment Method</label>
                 <p className="text-sm text-gray-900">
@@ -183,7 +181,6 @@ const SubscriptionDashboard = () => {
                   {format(new Date(currentSubscription.start_date), 'MMM d, yyyy')}
                 </p>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">End Date</label>
                 <p className={`text-sm font-medium ${expired ? 'text-red-600' : expiringSoon ? 'text-yellow-600' : 'text-gray-900'}`}>
@@ -191,9 +188,11 @@ const SubscriptionDashboard = () => {
                 </p>
                 {daysUntilExpiry !== null && (
                   <p className="text-xs text-gray-500">
-                    {expired ? `${Math.abs(daysUntilExpiry)} days ago` : 
-                     daysUntilExpiry === 0 ? 'Expires today' :
-                     `${daysUntilExpiry} days remaining`}
+                    {expired 
+                      ? `${Math.abs(daysUntilExpiry)} days ago` 
+                      : daysUntilExpiry === 0 
+                        ? 'Expires today' 
+                        : `${daysUntilExpiry} days remaining`}
                   </p>
                 )}
               </div>
@@ -212,7 +211,7 @@ const SubscriptionDashboard = () => {
 
       {/* Available Packages */}
       {showPackages && (
-        <motion.div
+        <motion.div 
           className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -220,8 +219,8 @@ const SubscriptionDashboard = () => {
         >
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-semibold text-gray-900">Available Packages</h3>
-            <button
-              onClick={() => setShowPackages(false)}
+            <button 
+              onClick={() => setShowPackages(false)} 
               className="text-gray-400 hover:text-gray-600"
             >
               <SafeIcon icon={FiX} className="w-5 h-5" />
@@ -230,8 +229,8 @@ const SubscriptionDashboard = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {packages.map((pkg) => (
-              <motion.div
-                key={pkg.id}
+              <motion.div 
+                key={pkg.id} 
                 className="border border-gray-200 rounded-lg p-6 hover:border-blue-300 hover:shadow-md transition-all"
                 whileHover={{ scale: 1.02 }}
               >
@@ -257,7 +256,6 @@ const SubscriptionDashboard = () => {
                     <SafeIcon icon={FiCalendar} className="w-4 h-4 mr-2" />
                     <span>{pkg.duration_months} month subscription</span>
                   </div>
-                  
                   {pkg.max_users ? (
                     <div className="flex items-center text-sm text-gray-600">
                       <SafeIcon icon={FiUsers} className="w-4 h-4 mr-2" />
@@ -285,8 +283,8 @@ const SubscriptionDashboard = () => {
                   </div>
                 )}
 
-                <button
-                  onClick={() => handleSubscribeToPackage(pkg)}
+                <button 
+                  onClick={() => handleSubscribeToPackage(pkg)} 
                   className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                 >
                   <SafeIcon icon={FiCreditCard} className="w-4 h-4 mr-2" />
@@ -306,14 +304,14 @@ const SubscriptionDashboard = () => {
       )}
 
       {/* Subscription History */}
-      <motion.div
+      <motion.div 
         className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
       >
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Subscription History</h3>
-        
+
         {subscriptionHistory.length > 0 ? (
           <div className="space-y-4">
             {subscriptionHistory.map((subscription) => (
@@ -351,7 +349,7 @@ const SubscriptionDashboard = () => {
       </motion.div>
 
       {/* Payment Modal */}
-      <PaymentModal
+      <PaymentModal 
         isOpen={showPaymentModal}
         onClose={() => {
           setShowPaymentModal(false);

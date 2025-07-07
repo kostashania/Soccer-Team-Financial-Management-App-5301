@@ -4,10 +4,7 @@ import { useForm } from 'react-hook-form';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 
-const { 
-  FiX, FiCreditCard, FiDollarSign, FiLock, FiCheck, 
-  FiCalendar, FiUser, FiShield 
-} = FiIcons;
+const { FiX, FiCreditCard, FiDollarSign, FiLock, FiCheck, FiCalendar, FiUser, FiShield } = FiIcons;
 
 const PaymentModal = ({ isOpen, onClose, onPaymentComplete, subscription }) => {
   const [paymentMethod, setPaymentMethod] = useState('stripe');
@@ -16,7 +13,6 @@ const PaymentModal = ({ isOpen, onClose, onPaymentComplete, subscription }) => {
 
   const handlePayment = async (data) => {
     setProcessing(true);
-    
     try {
       // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -26,7 +22,7 @@ const PaymentModal = ({ isOpen, onClose, onPaymentComplete, subscription }) => {
         ...data,
         processedAt: new Date().toISOString()
       };
-
+      
       onPaymentComplete(paymentMethod, paymentDetails);
     } catch (error) {
       console.error('Payment error:', error);
@@ -39,7 +35,7 @@ const PaymentModal = ({ isOpen, onClose, onPaymentComplete, subscription }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <motion.div
+      <motion.div 
         className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -84,11 +80,11 @@ const PaymentModal = ({ isOpen, onClose, onPaymentComplete, subscription }) => {
             </label>
             <div className="space-y-2">
               <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="stripe"
-                  checked={paymentMethod === 'stripe'}
+                <input 
+                  type="radio" 
+                  name="paymentMethod" 
+                  value="stripe" 
+                  checked={paymentMethod === 'stripe'} 
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                 />
@@ -97,24 +93,24 @@ const PaymentModal = ({ isOpen, onClose, onPaymentComplete, subscription }) => {
               </label>
               
               <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="paypal"
-                  checked={paymentMethod === 'paypal'}
+                <input 
+                  type="radio" 
+                  name="paymentMethod" 
+                  value="paypal" 
+                  checked={paymentMethod === 'paypal'} 
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                 />
                 <SafeIcon icon={FiDollarSign} className="w-5 h-5 text-blue-600 ml-3 mr-2" />
                 <span className="text-sm font-medium text-gray-900">PayPal</span>
               </label>
-
+              
               <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="bank_transfer"
-                  checked={paymentMethod === 'bank_transfer'}
+                <input 
+                  type="radio" 
+                  name="paymentMethod" 
+                  value="bank_transfer" 
+                  checked={paymentMethod === 'bank_transfer'} 
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                 />
@@ -132,8 +128,8 @@ const PaymentModal = ({ isOpen, onClose, onPaymentComplete, subscription }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Card Number *
                   </label>
-                  <input
-                    type="text"
+                  <input 
+                    type="text" 
                     {...register('cardNumber', { 
                       required: 'Card number is required',
                       pattern: {
@@ -154,8 +150,8 @@ const PaymentModal = ({ isOpen, onClose, onPaymentComplete, subscription }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Expiry Date *
                     </label>
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       {...register('expiryDate', { 
                         required: 'Expiry date is required',
                         pattern: {
@@ -170,13 +166,13 @@ const PaymentModal = ({ isOpen, onClose, onPaymentComplete, subscription }) => {
                       <p className="mt-1 text-sm text-red-600">{errors.expiryDate.message}</p>
                     )}
                   </div>
-
+                  
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       CVC *
                     </label>
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       {...register('cvc', { 
                         required: 'CVC is required',
                         pattern: {
@@ -197,9 +193,11 @@ const PaymentModal = ({ isOpen, onClose, onPaymentComplete, subscription }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Cardholder Name *
                   </label>
-                  <input
-                    type="text"
-                    {...register('cardholderName', { required: 'Cardholder name is required' })}
+                  <input 
+                    type="text" 
+                    {...register('cardholderName', { 
+                      required: 'Cardholder name is required'
+                    })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="John Doe"
                   />
@@ -228,8 +226,7 @@ const PaymentModal = ({ isOpen, onClose, onPaymentComplete, subscription }) => {
                   <p><strong>BIC:</strong> COBADEFFXXX</p>
                   <p><strong>Reference:</strong> SUB-{subscription.id}</p>
                   <p className="mt-2 text-xs">
-                    Please include the reference number in your transfer. 
-                    Your subscription will be activated once payment is received.
+                    Please include the reference number in your transfer. Your subscription will be activated once payment is received.
                   </p>
                 </div>
               </div>
@@ -247,15 +244,15 @@ const PaymentModal = ({ isOpen, onClose, onPaymentComplete, subscription }) => {
 
             {/* Actions */}
             <div className="flex justify-end space-x-3 pt-4">
-              <button
-                type="button"
+              <button 
+                type="button" 
                 onClick={onClose}
                 disabled={processing}
                 className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
-              <button
+              <button 
                 type="submit"
                 disabled={processing}
                 className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

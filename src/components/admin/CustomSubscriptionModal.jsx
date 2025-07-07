@@ -6,15 +6,14 @@ import SafeIcon from '../common/SafeIcon';
 
 const { FiX, FiSave, FiDollarSign, FiCalendar, FiSettings } = FiIcons;
 
-const CustomSubscriptionModal = ({ 
-  isOpen, 
-  onClose, 
-  onSubmit, 
-  tenant, 
-  packages,
-  loading = false 
-}) => {
-  const { register, handleSubmit, watch, formState: { errors }, reset } = useForm();
+const CustomSubscriptionModal = ({ isOpen, onClose, onSubmit, tenant, packages, loading = false }) => {
+  const { 
+    register, 
+    handleSubmit, 
+    watch, 
+    formState: { errors }, 
+    reset 
+  } = useForm();
 
   const selectedPackageId = watch('packageId');
   const selectedPackage = packages.find(p => p.id === selectedPackageId);
@@ -24,7 +23,7 @@ const CustomSubscriptionModal = ({
   const handleFormSubmit = (data) => {
     const customPrice = data.useCustomPrice ? parseFloat(data.customPrice) : null;
     const customDuration = data.useCustomDuration ? parseInt(data.customDuration) : null;
-    
+
     onSubmit({
       tenantId: tenant.id,
       packageId: data.packageId,
@@ -43,7 +42,7 @@ const CustomSubscriptionModal = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <motion.div
+      <motion.div 
         className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -66,7 +65,7 @@ const CustomSubscriptionModal = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Base Package *
               </label>
-              <select
+              <select 
                 {...register('packageId', { required: 'Please select a base package' })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
@@ -103,9 +102,9 @@ const CustomSubscriptionModal = ({
             {/* Custom Price Option */}
             <div className="space-y-3">
               <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="useCustomPrice"
+                <input 
+                  type="checkbox" 
+                  id="useCustomPrice" 
                   {...register('useCustomPrice')}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
@@ -113,7 +112,6 @@ const CustomSubscriptionModal = ({
                   Use custom price
                 </label>
               </div>
-
               {useCustomPrice && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -142,9 +140,9 @@ const CustomSubscriptionModal = ({
             {/* Custom Duration Option */}
             <div className="space-y-3">
               <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="useCustomDuration"
+                <input 
+                  type="checkbox" 
+                  id="useCustomDuration" 
                   {...register('useCustomDuration')}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
@@ -152,7 +150,6 @@ const CustomSubscriptionModal = ({
                   Use custom duration
                 </label>
               </div>
-
               {useCustomDuration && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -183,7 +180,7 @@ const CustomSubscriptionModal = ({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Notes (Optional)
               </label>
-              <textarea
+              <textarea 
                 {...register('notes')}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -197,22 +194,13 @@ const CustomSubscriptionModal = ({
                 <h3 className="text-sm font-medium text-gray-900 mb-2">Subscription Summary</h3>
                 <div className="space-y-1 text-sm text-gray-700">
                   <p>
-                    <strong>Price:</strong> €
-                    {useCustomPrice ? 
-                      (watch('customPrice') || '0.00') : 
-                      selectedPackage.price.toFixed(2)
-                    }
+                    <strong>Price:</strong> € {useCustomPrice ? (watch('customPrice') || '0.00') : selectedPackage.price.toFixed(2)}
                   </p>
                   <p>
-                    <strong>Duration:</strong> 
-                    {useCustomDuration ? 
-                      (watch('customDuration') || selectedPackage.duration_months) : 
-                      selectedPackage.duration_months
-                    } months
+                    <strong>Duration:</strong> {useCustomDuration ? (watch('customDuration') || selectedPackage.duration_months) : selectedPackage.duration_months} months
                   </p>
                   <p>
-                    <strong>Type:</strong> 
-                    {(useCustomPrice || useCustomDuration) ? ' Custom Subscription' : ' Standard Package'}
+                    <strong>Type:</strong> {(useCustomPrice || useCustomDuration) ? ' Custom Subscription' : ' Standard Package'}
                   </p>
                 </div>
               </div>
@@ -220,14 +208,14 @@ const CustomSubscriptionModal = ({
 
             {/* Actions */}
             <div className="flex justify-end space-x-3 pt-4">
-              <button
-                type="button"
+              <button 
+                type="button" 
                 onClick={handleClose}
                 className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
               >
                 Cancel
               </button>
-              <button
+              <button 
                 type="submit"
                 disabled={loading}
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Get environment variables
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+const SUPABASE_URL = 'https://bjelydvroavsqczejpgd.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqZWx5ZHZyb2F2c3FjemVqcGdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjE2MDcsImV4cCI6MjA2NjU5NzYwN30.f-693IO1d0TCBQRiWcSTvjCT8I7bb0t9Op_gvD5LeIE'
 
 // Validate environment variables
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -27,9 +27,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     schema: 'public'
   },
   global: {
-    headers: {
-      'X-Client-Info': 'soccer-team-finance'
-    }
+    headers: { 'X-Client-Info': 'soccer-team-finance' }
   }
 })
 
@@ -63,8 +61,11 @@ export const getDatabaseInfo = () => {
     schema: 'public',
     tables: [
       'users_central',
-      'tenants', 
+      'tenants',
       'global_settings',
+      'subscription_packages',
+      'tenant_subscriptions',
+      'subscription_payments',
       'subscription_reminders',
       'users_stf2024',
       'categories_stf2024',

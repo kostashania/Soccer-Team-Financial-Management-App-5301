@@ -39,7 +39,6 @@ export const SubscriptionProvider = ({ children }) => {
   // Fetch current tenant subscription
   const fetchCurrentSubscription = async () => {
     if (!tenant) return;
-
     try {
       const { data, error } = await supabase
         .from('tenant_subscriptions')
@@ -61,7 +60,6 @@ export const SubscriptionProvider = ({ children }) => {
   // Fetch subscription history
   const fetchSubscriptionHistory = async () => {
     if (!tenant) return;
-
     try {
       const { data, error } = await supabase
         .from('tenant_subscriptions')
@@ -95,7 +93,7 @@ export const SubscriptionProvider = ({ children }) => {
 
       const price = customPrice || packageData.price;
       const duration = customDuration || packageData.duration_months;
-      
+
       const startDate = new Date();
       const endDate = new Date();
       endDate.setMonth(endDate.getMonth() + duration);
@@ -141,8 +139,8 @@ export const SubscriptionProvider = ({ children }) => {
 
       await fetchCurrentSubscription();
       await fetchSubscriptionHistory();
-
       toast.success('Subscription created successfully!');
+      
       return { success: true, subscription: data };
     } catch (error) {
       console.error('Error creating subscription:', error);
@@ -156,7 +154,6 @@ export const SubscriptionProvider = ({ children }) => {
     try {
       // In a real implementation, you would integrate with Stripe, PayPal, etc.
       // For now, we'll simulate payment processing
-      
       const { data, error } = await supabase
         .from('tenant_subscriptions')
         .update({
@@ -186,7 +183,6 @@ export const SubscriptionProvider = ({ children }) => {
 
       await fetchCurrentSubscription();
       await fetchSubscriptionHistory();
-
       toast.success('Payment processed successfully!');
       return { success: true };
     } catch (error) {
@@ -211,7 +207,6 @@ export const SubscriptionProvider = ({ children }) => {
 
       await fetchCurrentSubscription();
       await fetchSubscriptionHistory();
-
       toast.success('Subscription cancelled successfully!');
       return { success: true };
     } catch (error) {
@@ -224,31 +219,25 @@ export const SubscriptionProvider = ({ children }) => {
   // Check if subscription is expiring soon
   const isExpiringSoon = (daysThreshold = 30) => {
     if (!currentSubscription) return false;
-    
     const endDate = new Date(currentSubscription.end_date);
     const today = new Date();
     const daysUntilExpiry = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
-    
     return daysUntilExpiry <= daysThreshold && daysUntilExpiry > 0;
   };
 
   // Check if subscription is expired
   const isExpired = () => {
     if (!currentSubscription) return false;
-    
     const endDate = new Date(currentSubscription.end_date);
     const today = new Date();
-    
     return today > endDate;
   };
 
   // Get days until expiry
   const getDaysUntilExpiry = () => {
     if (!currentSubscription) return null;
-    
     const endDate = new Date(currentSubscription.end_date);
     const today = new Date();
-    
     return Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
   };
 

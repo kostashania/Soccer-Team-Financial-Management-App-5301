@@ -14,30 +14,30 @@ import toast from 'react-hot-toast';
 
 const {
   FiPlus, FiEdit3, FiCopy, FiTrash2, FiSettings, FiGlobe, FiUsers, FiCalendar,
-  FiDollarSign, FiMail, FiEye, FiSave, FiX, FiBuilding, FiLogOut, FiUserPlus, 
-  FiInfo, FiDatabase, FiServer, FiKey, FiShield, FiCode, FiLayers, FiGitBranch, 
-  FiCpu, FiHardDrive, FiWifi, FiLock, FiFileText, FiMonitor, FiActivity, 
+  FiDollarSign, FiMail, FiEye, FiSave, FiX, FiBuilding, FiLogOut, FiUserPlus,
+  FiInfo, FiDatabase, FiServer, FiKey, FiShield, FiCode, FiLayers, FiGitBranch,
+  FiCpu, FiHardDrive, FiWifi, FiLock, FiFileText, FiMonitor, FiActivity,
   FiCreditCard, FiPercent, FiTrendingUp, FiTrendingDown, FiBarChart3, FiGift,
   FiToggleLeft, FiToggleRight, FiRefreshCw, FiCheckCircle, FiTag, FiPackage
 } = FiIcons;
 
 const SuperAdminDashboard = () => {
   const { user, logout } = useAuth();
-  const { 
-    tenants, 
-    globalSettings, 
-    loading, 
-    createTenant, 
-    createTenantUser, 
-    updateTenant, 
-    duplicateTenant, 
-    updateGlobalSettings, 
+  const {
+    tenants,
+    globalSettings,
+    loading,
+    createTenant,
+    createTenantUser,
+    updateTenant,
+    duplicateTenant,
+    updateGlobalSettings,
     isSuperAdmin,
     fetchTenants,
     fetchAllUsers,
     fetchFinancialData
   } = useSuperAdmin();
-  
+
   const [activeTab, setActiveTab] = useState('tenants');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
@@ -116,12 +116,12 @@ const SuperAdminDashboard = () => {
           tenant:tenants(name, domain)
         `)
         .order('created_at', { ascending: false });
-        
+
       if (error) {
         console.error('Error loading users:', error);
         throw error;
       }
-      
+
       console.log('Loaded users:', data);
       setAllUsers(data || []);
     } catch (error) {
@@ -132,35 +132,32 @@ const SuperAdminDashboard = () => {
       setLoadingUsers(false);
     }
   };
-  
+
   // Load financial data
   const loadFinancialData = async () => {
     try {
       console.log('Loading financial data...');
-      
       // Calculate revenue based on tenants
       const activeTenants = tenants.filter(t => t.active);
       const monthlyRevenue = activeTenants.reduce((total, tenant) => {
         return total + (tenant.plan === 'premium' ? 100 : 50);
       }, 0);
-      
+
       // Calculate total revenue from all time
       const totalRevenue = tenants.reduce((total, tenant) => {
         // Calculate months active
         const startDate = new Date(tenant.start_date);
         const endDate = tenant.active ? new Date() : new Date(tenant.end_date);
         const monthsActive = Math.max(1, Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24 * 30)));
-        
         return total + (tenant.plan === 'premium' ? 100 : 50) * monthsActive;
       }, 0);
-      
+
       const newFinancialData = {
         monthlyRevenue,
         totalRevenue,
         activeSubscriptions: activeTenants.length,
         totalTenants: tenants.length
       };
-      
       console.log('Financial data calculated:', newFinancialData);
       setFinancialData(newFinancialData);
     } catch (error) {
@@ -168,7 +165,7 @@ const SuperAdminDashboard = () => {
       toast.error("Failed to load financial data");
     }
   };
-  
+
   // Fetch system information
   const fetchSystemInfo = async () => {
     try {
@@ -177,7 +174,7 @@ const SuperAdminDashboard = () => {
       // Get database statistics
       const tables = [
         'users_central',
-        'tenants', 
+        'tenants',
         'global_settings',
         'subscription_reminders',
         'subscription_packages',
@@ -196,6 +193,7 @@ const SuperAdminDashboard = () => {
           const { count, error } = await supabase
             .from(table)
             .select('*', { count: 'exact', head: true });
+            
           if (!error) {
             tableStats[table] = count || 0;
           } else {
@@ -239,7 +237,7 @@ const SuperAdminDashboard = () => {
       fetchSystemInfo();
     }
   }, [isSuperAdmin]);
-  
+
   // Load financial data when tenants change
   useEffect(() => {
     if (tenants.length > 0) {
@@ -264,7 +262,6 @@ const SuperAdminDashboard = () => {
         }]);
 
       if (error) throw error;
-      
       await loadAllUsers();
       setShowCreateUserGlobalModal(false);
       createUserGlobalForm.reset();
@@ -277,7 +274,6 @@ const SuperAdminDashboard = () => {
 
   const handleEditUser = async (data) => {
     if (!editingUser) return;
-    
     try {
       console.log('Updating user:', editingUser.id, 'with data:', data);
       const { error } = await supabase
@@ -292,7 +288,6 @@ const SuperAdminDashboard = () => {
         .eq('id', editingUser.id);
 
       if (error) throw error;
-      
       await loadAllUsers();
       setShowEditUserModal(false);
       setEditingUser(null);
@@ -308,7 +303,6 @@ const SuperAdminDashboard = () => {
     if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
       return;
     }
-    
     try {
       console.log('Deleting user:', userId);
       const { error } = await supabase
@@ -317,7 +311,6 @@ const SuperAdminDashboard = () => {
         .eq('id', userId);
 
       if (error) throw error;
-      
       await loadAllUsers();
       toast.success('User deleted successfully!');
     } catch (error) {
@@ -344,7 +337,6 @@ const SuperAdminDashboard = () => {
         });
 
       if (error) throw error;
-
       await fetchTenants();
       setShowCustomSubscriptionModal(false);
       toast.success('Custom subscription created successfully!');
@@ -362,7 +354,6 @@ const SuperAdminDashboard = () => {
       adminEmail: data.adminEmail,
       adminPassword: data.adminPassword
     });
-    
     if (result.success) {
       setShowCreateModal(false);
       createForm.reset();
@@ -371,7 +362,6 @@ const SuperAdminDashboard = () => {
 
   const handleCreateTenantUser = async (data) => {
     if (!selectedTenant) return;
-    
     const result = await createTenantUser(selectedTenant.id, data);
     if (result.success) {
       setShowCreateUserModal(false);
@@ -382,14 +372,12 @@ const SuperAdminDashboard = () => {
 
   const handleEditTenant = async (data) => {
     if (!editingTenant) return;
-    
     const updates = {
       name: data.name,
       domain: data.domain,
       plan: data.plan,
       active: data.active
     };
-    
     const result = await updateTenant(editingTenant.id, updates);
     if (result.success) {
       setShowEditModal(false);
@@ -400,13 +388,11 @@ const SuperAdminDashboard = () => {
 
   const handleDuplicateTenant = async (data) => {
     if (!selectedTenant) return;
-    
     const result = await duplicateTenant(
       selectedTenant.id,
       data.newDomain,
       data.newName
     );
-    
     if (result.success) {
       setShowDuplicateModal(false);
       setSelectedTenant(null);
@@ -483,7 +469,7 @@ const SuperAdminDashboard = () => {
       </div>
     );
   }
-  
+
   const tabs = [
     { id: 'tenants', label: 'Tenant Management', icon: FiBuilding },
     { id: 'users', label: 'User Management', icon: FiUsers },
@@ -506,7 +492,7 @@ const SuperAdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <motion.div
+      <motion.div 
         className="max-w-7xl mx-auto"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -518,9 +504,8 @@ const SuperAdminDashboard = () => {
             <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
             <p className="mt-2 text-gray-600">Manage tenants, users, packages, and subscriptions</p>
           </div>
-          
-          <button
-            onClick={logout}
+          <button 
+            onClick={logout} 
             className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
           >
             <SafeIcon icon={FiLogOut} className="w-4 h-4 mr-2" />
@@ -613,7 +598,7 @@ const SuperAdminDashboard = () => {
 
         {/* Package Management Tab */}
         {activeTab === 'packages' && (
-          <motion.div
+          <motion.div 
             className="space-y-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -625,7 +610,7 @@ const SuperAdminDashboard = () => {
 
         {/* Subscription Management Tab */}
         {activeTab === 'subscriptions' && (
-          <motion.div
+          <motion.div 
             className="space-y-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -634,7 +619,6 @@ const SuperAdminDashboard = () => {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-900">Tenant Subscriptions</h2>
             </div>
-
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -672,14 +656,14 @@ const SuperAdminDashboard = () => {
                           {tenant.end_date ? format(new Date(tenant.end_date), 'MMM d, yyyy') : 'Not set'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button
+                          <button 
                             onClick={() => openCustomSubscriptionModal(tenant)}
                             className="text-blue-600 hover:text-blue-900 mr-3"
                             title="Create Custom Subscription"
                           >
                             <SafeIcon icon={FiPlus} className="w-4 h-4" />
                           </button>
-                          <button
+                          <button 
                             onClick={() => openEditModal(tenant)}
                             className="text-gray-600 hover:text-gray-900"
                             title="Edit Tenant"
@@ -698,7 +682,7 @@ const SuperAdminDashboard = () => {
 
         {/* Other tabs would go here... */}
         {/* For brevity, I'm showing just the key new tabs */}
-
+        
         {/* Custom Subscription Modal */}
         <CustomSubscriptionModal
           isOpen={showCustomSubscriptionModal}
