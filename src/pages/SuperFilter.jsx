@@ -24,11 +24,22 @@ const SuperFilter = () => {
     itemId: ''
   });
 
+  // Debug logs to understand the data structure
+  console.log('Categories:', categories);
+  console.log('Transactions:', transactions);
+  
   const filteredTransactions = transactions.filter(transaction => {
     const transactionDate = new Date(transaction.createdAt);
     const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null;
     const toDate = filters.dateTo ? new Date(filters.dateTo) : null;
-
+    
+    console.log('Filtering transaction:', {
+      id: transaction.id,
+      categoryId: transaction.categoryId,
+      filterCategoryId: filters.categoryId,
+      isMatch: !filters.categoryId || transaction.categoryId === filters.categoryId
+    });
+    
     return (
       (!fromDate || transactionDate >= fromDate) &&
       (!toDate || transactionDate <= toDate) &&
@@ -38,8 +49,9 @@ const SuperFilter = () => {
       (!filters.official || transaction.official.toString() === filters.official) &&
       (!filters.count || transaction.count.toString() === filters.count) &&
       (!filters.submittedBy || transaction.submittedBy === filters.submittedBy) &&
-      (!filters.categoryId || transaction.categoryId === parseInt(filters.categoryId)) &&
-      (!filters.itemId || transaction.itemId === parseInt(filters.itemId))
+      // Fix: Comparing string to string, not trying to parse as integer
+      (!filters.categoryId || transaction.categoryId === filters.categoryId) &&
+      (!filters.itemId || transaction.itemId === filters.itemId)
     );
   });
 
@@ -70,8 +82,10 @@ const SuperFilter = () => {
 
   const exportToCSV = () => {
     const headers = [
-      'Date', 'Type', 'Category', 'Item', 'Description', 'Amount', 'Status', 'Official', 'Count', 'Submitted By', 'Approval Status'
+      'Date', 'Type', 'Category', 'Item', 'Description', 'Amount',
+      'Status', 'Official', 'Count', 'Submitted By', 'Approval Status'
     ];
+
     const csvData = filteredTransactions.map(t => [
       format(new Date(t.createdAt), 'yyyy-MM-dd'),
       t.type,
@@ -104,8 +118,13 @@ const SuperFilter = () => {
     exportToCSV(); // Fallback to CSV for now
   };
 
-  const filteredCategories = filters.type ? categories.filter(cat => cat.type === filters.type) : categories;
-  const filteredItems = filters.categoryId ? items.filter(item => item.categoryId === parseInt(filters.categoryId)) : items;
+  const filteredCategories = filters.type
+    ? categories.filter(cat => cat.type === filters.type)
+    : categories;
+
+  const filteredItems = filters.categoryId
+    ? items.filter(item => item.categoryId === filters.categoryId)
+    : items;
 
   return (
     <div className="space-y-6">
@@ -170,7 +189,6 @@ const SuperFilter = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">To Date</label>
             <input
@@ -322,9 +340,7 @@ const SuperFilter = () => {
           </div>
           {filteredTransactions.length > 0 && (
             <div className="text-sm text-gray-600">
-              Total Amount: ${filteredTransactions.reduce((sum, t) => 
-                sum + (t.type === 'income' ? parseFloat(t.amount || 0) : -parseFloat(t.amount || 0)), 0
-              ).toLocaleString()}
+              Total Amount: ${filteredTransactions.reduce((sum, t) => sum + (t.type === 'income' ? parseFloat(t.amount || 0) : -parseFloat(t.amount || 0)), 0).toLocaleString()}
             </div>
           )}
         </div>
@@ -343,9 +359,13 @@ const SuperFilter = () => {
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-1">
                     <h3 className="font-medium text-gray-900">{transaction.description}</h3>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      transaction.type === 'income' ? 'bg-success-100 text-success-800' : 'bg-danger-100 text-danger-800'
-                    }`}>
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        transaction.type === 'income'
+                          ? 'bg-success-100 text-success-800'
+                          : 'bg-danger-100 text-danger-800'
+                      }`}
+                    >
                       {t(transaction.type)}
                     </span>
                   </div>
@@ -353,29 +373,40 @@ const SuperFilter = () => {
                     <span>{getCategoryName(transaction.categoryId)} • {getItemName(transaction.itemId)}</span>
                     <span>{transaction.submittedBy}</span>
                     <span>{format(new Date(transaction.createdAt), 'MMM d, yyyy')}</span>
-                    <span className={`capitalize ${
-                      transaction.approvalStatus === 'approved' ? 'text-success-600' :
-                      transaction.approvalStatus === 'disapproved' ? 'text-danger-600' : 'text-warning-600'
-                    }`}>
+                    <span
+                      className={`capitalize ${
+                        transaction.approvalStatus === 'approved'
+                          ? 'text-success-600'
+                          : transaction.approvalStatus === 'disapproved'
+                          ? 'text-danger-600'
+                          : 'text-warning-600'
+                      }`}
+                    >
                       {t(transaction.approvalStatus)}
                     </span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className={`font-semibold ${
-                    transaction.type === 'income' ? 'text-success-600' : 'text-danger-600'
-                  }`}>
+                  <p
+                    className={`font-semibold ${
+                      transaction.type === 'income' ? 'text-success-600' : 'text-danger-600'
+                    }`}
+                  >
                     {transaction.type === 'income' ? '+' : '-'}${parseFloat(transaction.amount || 0).toLocaleString()}
                   </p>
                   <div className="flex space-x-1 mt-1">
-                    <span className={`px-1 py-0.5 text-xs rounded ${
-                      transaction.status === 'paid' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
-                    }`}>
+                    <span
+                      className={`px-1 py-0.5 text-xs rounded ${
+                        transaction.status === 'paid' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
                       {t(transaction.status)}
                     </span>
-                    <span className={`px-1 py-0.5 text-xs rounded ${
-                      transaction.official ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
-                    }`}>
+                    <span
+                      className={`px-1 py-0.5 text-xs rounded ${
+                        transaction.official ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
                       {transaction.official ? t('official') : t('unofficial')}
                     </span>
                     {transaction.count && (
