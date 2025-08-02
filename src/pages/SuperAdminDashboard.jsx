@@ -25,20 +25,10 @@ const {
 const SuperAdminDashboard = () => {
   const { user, logout } = useAuth();
   const {
-    tenants,
-    globalSettings,
-    loading,
-    createTenant,
-    createTenantUser,
-    updateTenant,
-    duplicateTenant,
-    updateGlobalSettings,
-    isSuperAdmin,
-    fetchTenants,
-    fetchAllUsers,
+    tenants, globalSettings, loading, createTenant, createTenantUser, updateTenant,
+    duplicateTenant, updateGlobalSettings, isSuperAdmin, fetchTenants, fetchAllUsers,
     fetchFinancialData
   } = useSuperAdmin();
-
   const [activeTab, setActiveTab] = useState('tenants');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
@@ -122,7 +112,6 @@ const SuperAdminDashboard = () => {
         console.error('Error loading users:', error);
         throw error;
       }
-
       console.log('Loaded users:', data);
       setAllUsers(data || []);
     } catch (error) {
@@ -159,6 +148,7 @@ const SuperAdminDashboard = () => {
         activeSubscriptions: activeTenants.length,
         totalTenants: tenants.length
       };
+      
       console.log('Financial data calculated:', newFinancialData);
       setFinancialData(newFinancialData);
     } catch (error) {
@@ -171,7 +161,7 @@ const SuperAdminDashboard = () => {
   const fetchSystemInfo = async () => {
     try {
       setDbInfo(getDatabaseInfo());
-      
+
       // Get database statistics
       const tables = [
         'users_central',
@@ -187,14 +177,14 @@ const SuperAdminDashboard = () => {
         'platform_buttons_stf2024',
         'app_settings_stf2024'
       ];
-      
+
       const tableStats = {};
       for (const table of tables) {
         try {
           const { count, error } = await supabase
             .from(table)
             .select('*', { count: 'exact', head: true });
-            
+
           if (!error) {
             tableStats[table] = count || 0;
           } else {
@@ -204,7 +194,7 @@ const SuperAdminDashboard = () => {
           tableStats[table] = 'N/A';
         }
       }
-      
+
       setSystemInfo({
         tableStats,
         environment: {
@@ -355,6 +345,7 @@ const SuperAdminDashboard = () => {
       adminEmail: data.adminEmail,
       adminPassword: data.adminPassword
     });
+
     if (result.success) {
       setShowCreateModal(false);
       createForm.reset();
@@ -435,13 +426,14 @@ const SuperAdminDashboard = () => {
   };
 
   const openEditUserModal = (user) => {
+    console.log('Opening edit user modal for:', user);
     setEditingUser(user);
     editUserForm.reset({
-      name: user.name,
-      email: user.email,
-      role: user.role,
+      name: user.name || '',
+      email: user.email || '',
+      role: user.role || '',
       password: user.password || 'password',
-      active: user.active
+      active: user.active !== undefined ? user.active : true
     });
     setShowEditUserModal(true);
   };
@@ -491,7 +483,7 @@ const SuperAdminDashboard = () => {
   // Create Tenant Modal
   const CreateTenantModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <motion.div 
+      <motion.div
         className="bg-white rounded-lg max-w-md w-full p-6"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -499,15 +491,19 @@ const SuperAdminDashboard = () => {
       >
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-gray-900">Create New Tenant</h2>
-          <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600">
+          <button
+            onClick={() => setShowCreateModal(false)}
+            className="text-gray-400 hover:text-gray-600"
+          >
             <SafeIcon icon={FiX} className="w-6 h-6" />
           </button>
         </div>
+
         <form onSubmit={createForm.handleSubmit(handleCreateTenant)} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Tenant Name *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               {...createForm.register('name', { required: 'Tenant name is required' })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="My Soccer Team"
@@ -516,10 +512,11 @@ const SuperAdminDashboard = () => {
               <p className="mt-1 text-sm text-red-600">{createForm.formState.errors.name.message}</p>
             )}
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Domain *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               {...createForm.register('domain', { required: 'Domain is required' })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="mysoccerteam.com"
@@ -528,10 +525,11 @@ const SuperAdminDashboard = () => {
               <p className="mt-1 text-sm text-red-600">{createForm.formState.errors.domain.message}</p>
             )}
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Admin Email *</label>
-            <input 
-              type="email" 
+            <input
+              type="email"
               {...createForm.register('adminEmail', { required: 'Admin email is required' })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="admin@mysoccerteam.com"
@@ -540,10 +538,11 @@ const SuperAdminDashboard = () => {
               <p className="mt-1 text-sm text-red-600">{createForm.formState.errors.adminEmail.message}</p>
             )}
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Admin Password *</label>
-            <input 
-              type="password" 
+            <input
+              type="password"
               {...createForm.register('adminPassword', { required: 'Admin password is required' })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter admin password"
@@ -552,25 +551,31 @@ const SuperAdminDashboard = () => {
               <p className="mt-1 text-sm text-red-600">{createForm.formState.errors.adminPassword.message}</p>
             )}
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Plan</label>
-            <select {...createForm.register('plan')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select
+              {...createForm.register('plan')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
               <option value="basic">Basic</option>
               <option value="premium">Premium</option>
             </select>
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Subscription Months</label>
-            <input 
-              type="number" 
-              {...createForm.register('subscriptionMonths')} 
+            <input
+              type="number"
+              {...createForm.register('subscriptionMonths')}
               defaultValue={12}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
           <div className="flex justify-end pt-4">
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               Create Tenant
@@ -584,7 +589,7 @@ const SuperAdminDashboard = () => {
   // Edit Tenant Modal
   const EditTenantModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <motion.div 
+      <motion.div
         className="bg-white rounded-lg max-w-md w-full p-6"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -592,46 +597,57 @@ const SuperAdminDashboard = () => {
       >
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-gray-900">Edit Tenant</h2>
-          <button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-gray-600">
+          <button
+            onClick={() => setShowEditModal(false)}
+            className="text-gray-400 hover:text-gray-600"
+          >
             <SafeIcon icon={FiX} className="w-6 h-6" />
           </button>
         </div>
+
         {editingTenant && (
           <form onSubmit={editForm.handleSubmit(handleEditTenant)} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tenant Name *</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 {...editForm.register('name', { required: 'Tenant name is required' })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Domain *</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 {...editForm.register('domain', { required: 'Domain is required' })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Plan</label>
-              <select {...editForm.register('plan')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select
+                {...editForm.register('plan')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
                 <option value="basic">Basic</option>
                 <option value="premium">Premium</option>
               </select>
             </div>
+
             <div className="flex items-center">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 {...editForm.register('active')}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label className="ml-2 block text-sm text-gray-900">Active</label>
             </div>
+
             <div className="flex justify-end pt-4">
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 Update Tenant
@@ -646,7 +662,7 @@ const SuperAdminDashboard = () => {
   // Create User Global Modal
   const CreateUserGlobalModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <motion.div 
+      <motion.div
         className="bg-white rounded-lg max-w-md w-full p-6"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -654,39 +670,52 @@ const SuperAdminDashboard = () => {
       >
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-gray-900">Create New User</h2>
-          <button onClick={() => setShowCreateUserGlobalModal(false)} className="text-gray-400 hover:text-gray-600">
+          <button
+            onClick={() => setShowCreateUserGlobalModal(false)}
+            className="text-gray-400 hover:text-gray-600"
+          >
             <SafeIcon icon={FiX} className="w-6 h-6" />
           </button>
         </div>
+
         <form onSubmit={createUserGlobalForm.handleSubmit(handleCreateUser)} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Tenant</label>
-            <select {...createUserGlobalForm.register('tenant_id')} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select
+              {...createUserGlobalForm.register('tenant_id')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
               <option value="">Select Tenant (optional for superadmin)</option>
               {tenants.map(tenant => (
                 <option key={tenant.id} value={tenant.id}>{tenant.name}</option>
               ))}
             </select>
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               {...createUserGlobalForm.register('name', { required: 'Name is required' })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-            <input 
-              type="email" 
+            <input
+              type="email"
               {...createUserGlobalForm.register('email', { required: 'Email is required' })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
-            <select {...createUserGlobalForm.register('role', { required: 'Role is required' })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select
+              {...createUserGlobalForm.register('role', { required: 'Role is required' })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
               <option value="">Select Role</option>
               <option value="superadmin">Super Admin</option>
               <option value="admin">Admin</option>
@@ -694,27 +723,30 @@ const SuperAdminDashboard = () => {
               <option value="cashier">Cashier</option>
             </select>
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-            <input 
-              type="password" 
+            <input
+              type="password"
               {...createUserGlobalForm.register('password', { required: 'Password is required' })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               defaultValue="password"
             />
           </div>
+
           <div className="flex items-center">
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               {...createUserGlobalForm.register('active')}
               defaultChecked
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
             <label className="ml-2 block text-sm text-gray-900">Active</label>
           </div>
+
           <div className="flex justify-end pt-4">
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               Create User
@@ -725,9 +757,104 @@ const SuperAdminDashboard = () => {
     </div>
   );
 
+  // Edit User Modal
+  const EditUserModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <motion.div
+        className="bg-white rounded-lg max-w-md w-full p-6"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Edit User</h2>
+          <button
+            onClick={() => setShowEditUserModal(false)}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <SafeIcon icon={FiX} className="w-6 h-6" />
+          </button>
+        </div>
+
+        {editingUser && (
+          <form onSubmit={editUserForm.handleSubmit(handleEditUser)} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+              <input
+                type="text"
+                {...editUserForm.register('name', { required: 'Name is required' })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {editUserForm.formState.errors.name && (
+                <p className="mt-1 text-sm text-red-600">{editUserForm.formState.errors.name.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+              <input
+                type="email"
+                {...editUserForm.register('email', { required: 'Email is required' })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {editUserForm.formState.errors.email && (
+                <p className="mt-1 text-sm text-red-600">{editUserForm.formState.errors.email.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+              <select
+                {...editUserForm.register('role', { required: 'Role is required' })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="superadmin">Super Admin</option>
+                <option value="admin">Admin</option>
+                <option value="board">Board Member</option>
+                <option value="cashier">Cashier</option>
+              </select>
+              {editUserForm.formState.errors.role && (
+                <p className="mt-1 text-sm text-red-600">{editUserForm.formState.errors.role.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input
+                type="password"
+                {...editUserForm.register('password')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">Leave blank to keep current password</p>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="active"
+                {...editUserForm.register('active')}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="active" className="ml-2 block text-sm text-gray-900">Active</label>
+            </div>
+
+            <div className="flex justify-end pt-4">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Update User
+              </button>
+            </div>
+          </form>
+        )}
+      </motion.div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <motion.div 
+      <motion.div
         className="max-w-7xl mx-auto"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -739,8 +866,8 @@ const SuperAdminDashboard = () => {
             <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
             <p className="mt-2 text-gray-600">Manage tenants, users, packages, and subscriptions</p>
           </div>
-          <button 
-            onClick={logout} 
+          <button
+            onClick={logout}
             className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
           >
             <SafeIcon icon={FiLogOut} className="w-4 h-4 mr-2" />
@@ -833,7 +960,7 @@ const SuperAdminDashboard = () => {
 
         {/* Tenant Management Tab */}
         {activeTab === 'tenants' && (
-          <motion.div 
+          <motion.div
             className="space-y-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -841,7 +968,7 @@ const SuperAdminDashboard = () => {
           >
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-900">Tenant Management</h2>
-              <button 
+              <button
                 onClick={() => setShowCreateModal(true)}
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
@@ -849,6 +976,7 @@ const SuperAdminDashboard = () => {
                 Create Tenant
               </button>
             </div>
+
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -869,17 +997,23 @@ const SuperAdminDashboard = () => {
                           <div className="text-sm text-gray-500">{tenant.domain}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            tenant.plan === 'premium' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              tenant.plan === 'premium'
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}
+                          >
                             {tenant.plan}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <button 
+                          <button
                             onClick={() => handleToggleTenantStatus(tenant)}
                             className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              tenant.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                              tenant.active
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
                             }`}
                           >
                             {tenant.active ? 'Active' : 'Inactive'}
@@ -889,14 +1023,14 @@ const SuperAdminDashboard = () => {
                           {tenant.created_at ? format(new Date(tenant.created_at), 'MMM d, yyyy') : 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button 
+                          <button
                             onClick={() => openEditModal(tenant)}
                             className="text-blue-600 hover:text-blue-900 mr-3"
                             title="Edit Tenant"
                           >
                             <SafeIcon icon={FiEdit3} className="w-4 h-4" />
                           </button>
-                          <button 
+                          <button
                             onClick={() => openCreateUserModal(tenant)}
                             className="text-green-600 hover:text-green-900"
                             title="Create User"
@@ -915,7 +1049,7 @@ const SuperAdminDashboard = () => {
 
         {/* User Management Tab */}
         {activeTab === 'users' && (
-          <motion.div 
+          <motion.div
             className="space-y-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -923,7 +1057,7 @@ const SuperAdminDashboard = () => {
           >
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-900">User Management</h2>
-              <button 
+              <button
                 onClick={() => setShowCreateUserGlobalModal(true)}
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
@@ -935,9 +1069,9 @@ const SuperAdminDashboard = () => {
             {/* User Filters */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <select 
-                  value={userFilter.tenant} 
-                  onChange={(e) => setUserFilter({...userFilter, tenant: e.target.value})}
+                <select
+                  value={userFilter.tenant}
+                  onChange={(e) => setUserFilter({ ...userFilter, tenant: e.target.value })}
                   className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">All Tenants</option>
@@ -945,9 +1079,10 @@ const SuperAdminDashboard = () => {
                     <option key={tenant.id} value={tenant.id}>{tenant.name}</option>
                   ))}
                 </select>
-                <select 
-                  value={userFilter.role} 
-                  onChange={(e) => setUserFilter({...userFilter, role: e.target.value})}
+
+                <select
+                  value={userFilter.role}
+                  onChange={(e) => setUserFilter({ ...userFilter, role: e.target.value })}
                   className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">All Roles</option>
@@ -956,9 +1091,10 @@ const SuperAdminDashboard = () => {
                   <option value="board">Board Member</option>
                   <option value="cashier">Cashier</option>
                 </select>
-                <select 
-                  value={userFilter.status} 
-                  onChange={(e) => setUserFilter({...userFilter, status: e.target.value})}
+
+                <select
+                  value={userFilter.status}
+                  onChange={(e) => setUserFilter({ ...userFilter, status: e.target.value })}
                   className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">All Status</option>
@@ -991,31 +1127,40 @@ const SuperAdminDashboard = () => {
                           {user.tenant?.name || 'Global'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            user.role === 'superadmin' ? 'bg-red-100 text-red-800' :
-                            user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                            user.role === 'board' ? 'bg-blue-100 text-blue-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              user.role === 'superadmin'
+                                ? 'bg-red-100 text-red-800'
+                                : user.role === 'admin'
+                                ? 'bg-purple-100 text-purple-800'
+                                : user.role === 'board'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-green-100 text-green-800'
+                            }`}
+                          >
                             {user.role}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              user.active
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                          >
                             {user.active ? 'Active' : 'Inactive'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button 
+                          <button
                             onClick={() => openEditUserModal(user)}
                             className="text-blue-600 hover:text-blue-900 mr-3"
                             title="Edit User"
                           >
                             <SafeIcon icon={FiEdit3} className="w-4 h-4" />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDeleteUser(user.id)}
                             className="text-red-600 hover:text-red-900"
                             title="Delete User"
@@ -1034,7 +1179,7 @@ const SuperAdminDashboard = () => {
 
         {/* Package Management Tab */}
         {activeTab === 'packages' && (
-          <motion.div 
+          <motion.div
             className="space-y-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1046,7 +1191,7 @@ const SuperAdminDashboard = () => {
 
         {/* Subscription Management Tab */}
         {activeTab === 'subscriptions' && (
-          <motion.div 
+          <motion.div
             className="space-y-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1055,6 +1200,7 @@ const SuperAdminDashboard = () => {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-900">Tenant Subscriptions</h2>
             </div>
+
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -1075,16 +1221,24 @@ const SuperAdminDashboard = () => {
                           <div className="text-sm text-gray-500">{tenant.domain}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            tenant.plan === 'premium' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              tenant.plan === 'premium'
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}
+                          >
                             {tenant.plan}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            tenant.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              tenant.active
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                          >
                             {tenant.active ? 'Active' : 'Inactive'}
                           </span>
                         </td>
@@ -1092,14 +1246,14 @@ const SuperAdminDashboard = () => {
                           {tenant.end_date ? format(new Date(tenant.end_date), 'MMM d, yyyy') : 'Not set'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button 
+                          <button
                             onClick={() => openCustomSubscriptionModal(tenant)}
                             className="text-blue-600 hover:text-blue-900 mr-3"
                             title="Create Custom Subscription"
                           >
                             <SafeIcon icon={FiPlus} className="w-4 h-4" />
                           </button>
-                          <button 
+                          <button
                             onClick={() => openEditModal(tenant)}
                             className="text-gray-600 hover:text-gray-900"
                             title="Edit Tenant"
@@ -1118,7 +1272,7 @@ const SuperAdminDashboard = () => {
 
         {/* Global Settings Tab */}
         {activeTab === 'global' && (
-          <motion.div 
+          <motion.div
             className="space-y-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1126,59 +1280,65 @@ const SuperAdminDashboard = () => {
           >
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6">Global Settings</h2>
+
               <form onSubmit={settingsForm.handleSubmit(handleUpdateGlobalSettings)} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">App Title</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       {...settingsForm.register('app_title')}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Soccer Team Finance"
                     />
                   </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">App Subtitle</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       {...settingsForm.register('app_subtitle')}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Multi-Tenant Financial Management"
                     />
                   </div>
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Main Text</label>
-                  <textarea 
+                  <textarea
                     {...settingsForm.register('text')}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Welcome message for the homepage"
                   />
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Primary Button Text</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       {...settingsForm.register('button')}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Get Started"
                     />
                   </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Primary Button URL</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       {...settingsForm.register('button_url')}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="#"
                     />
                   </div>
                 </div>
+
                 <div className="flex justify-end">
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                   >
                     <SafeIcon icon={FiSave} className="w-4 h-4 mr-2" />
@@ -1192,7 +1352,7 @@ const SuperAdminDashboard = () => {
 
         {/* System Info Tab */}
         {activeTab === 'info' && (
-          <motion.div 
+          <motion.div
             className="space-y-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1205,6 +1365,7 @@ const SuperAdminDashboard = () => {
                   <SafeIcon icon={FiDatabase} className="w-6 h-6 text-blue-600 mr-3" />
                   <h3 className="text-lg font-semibold text-gray-900">Database Information</h3>
                 </div>
+
                 {dbInfo && (
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
@@ -1233,6 +1394,7 @@ const SuperAdminDashboard = () => {
                   <SafeIcon icon={FiActivity} className="w-6 h-6 text-green-600 mr-3" />
                   <h3 className="text-lg font-semibold text-gray-900">System Statistics</h3>
                 </div>
+
                 {systemInfo && (
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
@@ -1259,6 +1421,7 @@ const SuperAdminDashboard = () => {
                   <SafeIcon icon={FiBarChart3} className="w-6 h-6 text-purple-600 mr-3" />
                   <h3 className="text-lg font-semibold text-gray-900">Table Statistics</h3>
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {Object.entries(systemInfo.tableStats).map(([table, count]) => (
                     <div key={table} className="bg-gray-50 rounded-lg p-4">
@@ -1276,7 +1439,8 @@ const SuperAdminDashboard = () => {
         {showCreateModal && <CreateTenantModal />}
         {showEditModal && <EditTenantModal />}
         {showCreateUserGlobalModal && <CreateUserGlobalModal />}
-        
+        {showEditUserModal && <EditUserModal />}
+
         {/* Custom Subscription Modal */}
         <CustomSubscriptionModal
           isOpen={showCustomSubscriptionModal}
